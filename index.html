@@ -5,333 +5,423 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TypingArena | Pro Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@0.400.0"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
     <style>
         :root { --primary: #06b6d4; --primary-dark: #0891b2; --bg-light: #f8fafc; }
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: var(--bg-light); color: #1e293b; overflow-x: hidden; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: var(--bg-light); color: #1e293b; overflow-x: hidden; min-height: 100vh; }
         .mono { font-family: 'JetBrains Mono', monospace; }
-        .fade-in { animation: fadeIn 0.5s ease-out forwards; }
-        .slide-up { animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-        .scale-in { animation: scaleIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes scaleIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
-        .glass-card { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.5); box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.04); border-radius: 24px; transition: all 0.3s ease; }
-        .char { position: relative; display: inline-block; transition: all 0.15s; color: #94a3b8; font-size: 1.75rem; line-height: 1.8; white-space: pre; }
+        
+        .glass-card { 
+            background: rgba(255, 255, 255, 0.8); 
+            backdrop-filter: blur(12px); 
+            border: 1px solid rgba(255, 255, 255, 0.5); 
+            box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.04); 
+            border-radius: 24px; 
+            transition: all 0.3s ease; 
+        }
+
+        .char { position: relative; display: inline-block; color: #94a3b8; font-size: 1.5rem; line-height: 1.6; white-space: pre; transition: color 0.1s; }
+        @media (min-width: 768px) { .char { font-size: 1.85rem; } }
+        
         .char.current { color: #0f172a; }
-        .char.current::after { content: ''; position: absolute; left: 0; bottom: 4px; width: 100%; height: 3px; background: var(--primary); animation: blink 0.8s infinite; }
+        .char.current::after { content: ''; position: absolute; left: 0; bottom: 2px; width: 100%; height: 3px; background: var(--primary); animation: blink 0.8s infinite; }
         .char.correct { color: var(--primary); }
         .char.incorrect { color: #ef4444; background: rgba(239, 68, 68, 0.1); border-radius: 4px; }
+        
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
-        .active-tab { background: white; box-shadow: 0 4px 12px rgba(0,0,0,0.05); color: var(--primary-dark) !important; font-weight: 700; }
-        .btn-fancy { @apply relative overflow-hidden transition-all duration-300 active:scale-95; background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); color: white; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .anim-slide { animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+        .btn-fancy { 
+            @apply bg-cyan-500 hover:bg-cyan-600 text-white font-black rounded-2xl transition-all active:scale-95 shadow-lg shadow-cyan-500/20 flex items-center justify-center gap-2 disabled:opacity-50;
+        }
+
+        .active-tab { @apply bg-white text-cyan-600 shadow-sm ring-1 ring-slate-200; }
+
+        /* Mobile-friendly hidden input */
+        #hidden-input { 
+            position: fixed; 
+            bottom: 0; 
+            left: 0; 
+            opacity: 0; 
+            pointer-events: none; 
+            z-index: -1;
+        }
     </style>
 </head>
-<body class="min-h-screen">
+<body>
 
-    <nav class="bg-white/80 backdrop-blur-md border-b border-slate-100 px-6 py-4 flex justify-between items-center sticky top-0 z-[100]">
-        <div class="flex items-center gap-3 cursor-pointer" onclick="app.switchView('lobby')">
-            <div class="bg-cyan-500 p-2 rounded-xl text-white">
-                <i data-lucide="keyboard" class="w-6 h-6"></i>
+    <nav class="bg-white/70 backdrop-blur-md border-b border-slate-200/50 px-4 md:px-8 py-4 flex justify-between items-center sticky top-0 z-[50]">
+        <div class="flex items-center gap-3 cursor-pointer group" onclick="app.switchView('lobby')">
+            <div class="bg-cyan-500 p-2 rounded-xl text-white shadow-lg">
+                <i data-lucide="keyboard" class="w-5 h-5 md:w-6 md:h-6"></i>
             </div>
-            <span class="text-2xl font-extrabold tracking-tight text-slate-800">Typing<span class="text-cyan-500">Arena</span></span>
+            <span class="text-xl md:text-2xl font-extrabold tracking-tighter uppercase">Typing<span class="text-cyan-500">Arena</span></span>
         </div>
-        <div class="flex items-center gap-4">
-            <button onclick="app.switchView('leaderboard')" class="hidden md:flex items-center gap-2 px-4 py-2 text-sm font-bold text-slate-600">
-                <i data-lucide="trophy" class="w-4 h-4"></i> Rankings
-            </button>
-            <div id="nav-stats" class="hidden items-center gap-3 bg-slate-50 px-4 py-1.5 rounded-full border border-slate-100">
-                <div class="w-7 h-7 rounded-full bg-cyan-500 flex items-center justify-center text-white font-bold text-[10px]" id="user-initials">?</div>
-                <span id="user-display" class="text-xs font-bold text-slate-600">Guest</span>
+        <div class="flex items-center gap-3 md:gap-6">
+            <div id="user-pill" class="hidden sm:flex items-center gap-3 bg-slate-100 px-4 py-1.5 rounded-full border border-slate-200">
+                <div class="w-6 h-6 rounded-full bg-cyan-500 flex items-center justify-center text-[10px] text-white font-black" id="user-icon">?</div>
+                <span id="user-name-nav" class="text-xs font-bold text-slate-600">Guest</span>
             </div>
-            <button onclick="app.openSettings()" class="p-2.5 hover:bg-slate-100 rounded-xl text-slate-500">
+            <button onclick="app.openSettings()" class="p-2 text-slate-400 hover:text-cyan-500 transition-colors">
                 <i data-lucide="settings" class="w-5 h-5"></i>
             </button>
         </div>
     </nav>
 
-    <main class="container mx-auto px-4 py-12 max-w-5xl">
-        <section id="view-lobby" class="max-w-xl mx-auto space-y-10 slide-up">
+    <main class="container mx-auto px-4 py-8 md:py-12 max-w-5xl">
+        
+        <!-- View: Lobby -->
+        <section id="view-lobby" class="max-w-xl mx-auto space-y-8 md:space-y-10 anim-slide">
             <div class="text-center space-y-4">
-                <h2 class="text-5xl font-black text-slate-900">Master the <span class="text-cyan-500">Keyboard.</span></h2>
+                <h1 class="text-4xl md:text-5xl font-black text-slate-900 leading-tight">Master your <br class="hidden md:block"/><span class="text-cyan-500">Typing Skills.</span></h1>
+                <p class="text-slate-400 font-medium px-4">Join your classroom arena and compete for the highest speed.</p>
             </div>
-            <div class="glass-card p-10 space-y-8">
-                <input type="text" id="input-name" placeholder="Full Name" class="w-full bg-slate-50 border p-4 rounded-2xl">
-                <input type="text" id="input-class" placeholder="Classroom ID (Optional)" class="w-full bg-slate-50 border p-4 rounded-2xl">
-                <select id="input-category" class="w-full bg-slate-50 border p-4 rounded-2xl">
-                    <option value="cartoon">Cartoon GK</option>
-                    <option value="tmkoc">Taarak Mehta Series</option>
-                    <option value="tech">Tech & Trends</option>
-                </select>
-                <button onclick="app.joinArena()" class="w-full btn-fancy font-extrabold py-5 rounded-2xl uppercase">Enter the Arena</button>
+
+            <div class="glass-card p-6 md:p-10 space-y-6">
+                <div>
+                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Warrior Name</label>
+                    <input type="text" id="input-name" placeholder="Enter full name" class="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl focus:ring-2 focus:ring-cyan-500 outline-none font-bold mt-1">
+                </div>
+                <div>
+                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Class ID (Optional)</label>
+                    <input type="text" id="input-class" placeholder="Ex: CS-101" class="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl focus:ring-2 focus:ring-cyan-500 outline-none font-bold mt-1">
+                </div>
+                <div>
+                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Arena Category</label>
+                    <select id="input-category" class="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl focus:ring-2 focus:ring-cyan-500 outline-none font-bold mt-1">
+                        <option value="tech">Modern Tech</option>
+                        <option value="cartoon">Cartoon History</option>
+                        <option value="tmkoc">TMKOC Trivia</option>
+                    </select>
+                </div>
+                <button onclick="app.joinArena()" class="w-full btn-fancy py-5 text-lg">Enter Arena <i data-lucide="zap" class="w-5 h-5"></i></button>
             </div>
         </section>
 
-        <section id="view-arena" class="hidden space-y-8 fade-in">
-            <div class="flex justify-center p-1.5 bg-slate-100 rounded-2xl w-fit mx-auto">
-                <button class="time-opt px-8 py-2.5 rounded-xl active-tab" onclick="app.setDuration(15, this)">15s</button>
-                <button class="time-opt px-8 py-2.5 rounded-xl" onclick="app.setDuration(30, this)">30s</button>
-                <button class="time-opt px-8 py-2.5 rounded-xl" onclick="app.setDuration(60, this)">60s</button>
+        <!-- View: Arena -->
+        <section id="view-arena" class="hidden space-y-8 anim-slide">
+            <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+                <div class="flex gap-2 p-1.5 bg-slate-200/50 rounded-2xl w-full md:w-auto overflow-x-auto">
+                    <button class="time-btn flex-1 md:flex-none px-6 py-2 text-xs font-black rounded-xl text-slate-500 transition-all" onclick="app.setDuration(15, this)">15s</button>
+                    <button class="time-btn flex-1 md:flex-none px-6 py-2 text-xs font-black rounded-xl text-slate-500 transition-all active-tab" onclick="app.setDuration(30, this)">30s</button>
+                    <button class="time-btn flex-1 md:flex-none px-6 py-2 text-xs font-black rounded-xl text-slate-500 transition-all" onclick="app.setDuration(60, this)">60s</button>
+                </div>
+                <div class="flex items-center justify-between md:justify-end gap-6 md:gap-10 w-full md:w-auto">
+                    <div class="text-center">
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">WPM</p>
+                        <p class="text-2xl md:text-3xl font-black text-slate-800" id="stat-wpm">0</p>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Acc</p>
+                        <p class="text-2xl md:text-3xl font-black text-slate-800"><span id="stat-acc">100</span>%</p>
+                    </div>
+                    <div class="bg-slate-900 text-white px-6 md:px-8 py-3 rounded-2xl shadow-xl min-w-[100px] text-center">
+                        <p class="text-[10px] font-black uppercase opacity-60">Timer</p>
+                        <p class="text-2xl md:text-3xl font-black mono" id="stat-time">30</p>
+                    </div>
+                </div>
             </div>
-            <div class="grid grid-cols-3 gap-6 max-w-4xl mx-auto text-center">
-                <div class="glass-card p-4">
-                    <p class="text-xs text-slate-400 font-bold uppercase">Time</p>
-                    <span id="stat-time" class="text-4xl font-black text-cyan-500">30</span>
-                </div>
-                <div class="glass-card p-4">
-                    <p class="text-xs text-slate-400 font-bold uppercase">WPM</p>
-                    <span id="stat-wpm" class="text-4xl font-black">0</span>
-                </div>
-                <div class="glass-card p-4">
-                    <p class="text-xs text-slate-400 font-bold uppercase">Accuracy</p>
-                    <span class="text-4xl font-black"><span id="stat-acc">100</span>%</span>
+
+            <div id="arena-box" class="relative glass-card p-8 md:p-20 min-h-[300px] md:min-h-[350px] flex items-center justify-center cursor-text" onclick="app.focusArena()">
+                <div id="text-display" class="mono select-none leading-relaxed text-center max-w-3xl"></div>
+                <input type="text" id="hidden-input" autocomplete="off" spellcheck="false" inputmode="text">
+                
+                <div id="focus-needed" class="hidden absolute inset-0 bg-white/60 backdrop-blur-[2px] flex items-center justify-center rounded-3xl z-10">
+                    <div class="bg-white px-6 py-3 rounded-full shadow-2xl border border-slate-100 flex items-center gap-3">
+                        <span class="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
+                        <p class="text-sm font-black text-slate-700">Tap to start typing</p>
+                    </div>
                 </div>
             </div>
-            <div class="relative glass-card p-16 mt-10 min-h-[320px] flex items-center justify-center">
-                <div id="text-display" class="text-center font-medium mono select-none leading-relaxed"></div>
-                <input type="text" id="hidden-input" class="absolute inset-0 opacity-0 cursor-default" autofocus autocomplete="off">
+
+            <div class="flex justify-center">
+                <button onclick="app.resetSession()" class="flex items-center gap-2 text-slate-400 hover:text-cyan-500 font-black text-[10px] md:text-xs uppercase transition-all">
+                    <i data-lucide="refresh-cw" class="w-4 h-4"></i> Reset Arena (Esc)
+                </button>
             </div>
         </section>
 
-        <section id="view-results" class="hidden max-w-4xl mx-auto space-y-10 scale-in">
-            <div class="text-center"><h2 class="text-4xl font-black">Performance Report</h2></div>
-            <div class="grid grid-cols-3 gap-8">
-                <div class="glass-card p-10 text-center"><div class="text-6xl font-black text-cyan-500" id="res-wpm">0</div><div class="text-xs font-bold text-slate-400 uppercase">Gross WPM</div></div>
-                <div class="glass-card p-10 text-center"><div class="text-6xl font-black text-emerald-500" id="res-acc">0%</div><div class="text-xs font-bold text-slate-400 uppercase">Precision</div></div>
-                <div class="glass-card p-10 text-center bg-slate-900 text-white"><div class="text-6xl font-black" id="res-net">0</div><div class="text-xs font-bold uppercase opacity-60">Net Score</div></div>
+        <!-- View: Results -->
+        <section id="view-results" class="hidden max-w-4xl mx-auto space-y-8 md:space-y-10 anim-slide">
+            <div class="text-center space-y-2">
+                <h2 class="text-3xl md:text-4xl font-black text-slate-900">Session Summary</h2>
+                <p id="result-message" class="text-slate-500 font-bold"></p>
             </div>
-            <div class="flex justify-center gap-4">
-                <button onclick="app.switchView('arena')" class="btn-fancy px-12 py-5 rounded-2xl font-bold uppercase">Retry</button>
-                <button onclick="app.switchView('lobby')" class="bg-white border px-12 py-5 rounded-2xl font-bold uppercase">Main Menu</button>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8">
+                <div class="glass-card p-8 md:p-12 text-center space-y-2 border-cyan-100">
+                    <p class="text-5xl md:text-6xl font-black text-cyan-600" id="res-wpm">0</p>
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Gross WPM</p>
+                </div>
+                <div class="glass-card p-8 md:p-12 text-center space-y-2 border-emerald-100">
+                    <p class="text-5xl md:text-6xl font-black text-emerald-500" id="res-acc">0%</p>
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Precision</p>
+                </div>
+                <div class="glass-card p-8 md:p-12 text-center space-y-2 bg-slate-900 text-white">
+                    <p class="text-5xl md:text-6xl font-black" id="res-net">0</p>
+                    <p class="text-[10px] font-black uppercase opacity-50 tracking-widest">Net Score</p>
+                </div>
+            </div>
+            <div class="flex flex-col md:flex-row justify-center gap-4 px-4">
+                <button onclick="app.switchView('arena')" class="btn-fancy px-12 py-5 text-xl w-full md:w-auto">Try Again</button>
+                <button onclick="app.switchView('lobby')" class="bg-white border-2 border-slate-200 px-12 py-5 rounded-2xl font-black text-slate-600 w-full md:w-auto">Main Menu</button>
             </div>
         </section>
 
-        <section id="view-leaderboard" class="hidden space-y-8 max-w-3xl mx-auto fade-in">
-            <div class="text-center"><h2 class="text-3xl font-black">Leaderboard</h2></div>
-            <div class="glass-card overflow-hidden">
-                <table class="w-full text-left">
-                    <thead class="bg-slate-50 text-xs font-black text-slate-400 uppercase">
-                        <tr><th class="p-6">Rank</th><th class="p-6">Competitor</th><th class="p-6">Net WPM</th><th class="p-6">Acc</th></tr>
-                    </thead>
-                    <tbody id="leaderboard-table"></tbody>
-                </table>
-            </div>
-            <button onclick="app.switchView('lobby')" class="w-full text-cyan-600 font-bold uppercase text-xs">Back to Lobby</button>
-        </section>
     </main>
 
+    <!-- Admin/Settings Modal -->
     <div id="modal-settings" class="hidden fixed inset-0 z-[150] backdrop-blur-md bg-slate-900/20 flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-md rounded-[32px] p-10 space-y-8 relative">
-            <button onclick="app.closeSettings()" class="absolute top-8 right-8 text-slate-300"><i data-lucide="x" class="w-6 h-6"></i></button>
-            <h3 class="text-2xl font-black">Control Panel</h3>
-            <div class="space-y-4">
-                <button onclick="app.showTeacherLogin()" class="w-full bg-slate-50 p-6 rounded-3xl text-left font-bold">Teacher Console</button>
-                <div id="teacher-auth-section" class="hidden space-y-4 pt-4">
-                    <input type="password" id="teacher-pass" placeholder="PIN" class="w-full border p-4 rounded-xl text-center text-2xl">
-                    <button onclick="app.attemptTeacherLogin()" class="w-full btn-fancy py-3 rounded-xl">Login</button>
-                </div>
+        <div class="bg-white w-full max-w-md rounded-[32px] p-6 md:p-10 space-y-8 relative shadow-2xl">
+            <button onclick="app.closeSettings()" class="absolute top-6 right-6 text-slate-300 hover:text-slate-600"><i data-lucide="x" class="w-6 h-6"></i></button>
+            <div class="flex items-center gap-4">
+                <div class="p-3 bg-slate-100 rounded-2xl"><i data-lucide="shield-check" class="text-slate-600"></i></div>
+                <h3 class="text-xl md:text-2xl font-black">Admin Console</h3>
             </div>
-        </div>
-    </div>
+            
+            <div id="admin-auth" class="space-y-4">
+                <p class="text-sm font-bold text-slate-500">Enter Teacher PIN</p>
+                <input type="password" id="admin-pin" placeholder="••••" maxlength="4" class="w-full bg-slate-50 border-2 p-5 rounded-2xl text-center text-3xl font-black tracking-[1em] focus:border-cyan-500 outline-none">
+                <button onclick="app.loginAdmin()" class="w-full btn-fancy py-4">Access Dashboard</button>
+            </div>
 
-    <div id="view-teacher" class="hidden fixed inset-0 bg-white z-[200] p-10 overflow-auto">
-        <div class="max-w-5xl mx-auto space-y-8">
-            <div class="flex justify-between items-center">
-                <h2 class="text-4xl font-black">Admin Panel</h2>
-                <div class="flex gap-4">
-                    <button onclick="app.exportCSV()" class="bg-slate-100 px-6 py-3 rounded-xl font-bold">Export CSV</button>
-                    <button onclick="app.switchView('lobby')" class="bg-slate-900 text-white px-6 py-3 rounded-xl font-bold">Logout</button>
+            <div id="admin-panel" class="hidden space-y-6">
+                <button onclick="app.exportCSV()" class="w-full flex items-center justify-between p-4 bg-emerald-50 text-emerald-700 rounded-2xl font-bold hover:bg-emerald-100 transition-colors">
+                    <span>Export All Records</span>
+                    <i data-lucide="download" class="w-5 h-5"></i>
+                </button>
+                <div class="p-4 bg-slate-50 rounded-2xl">
+                    <p class="text-[10px] font-black uppercase text-slate-400 mb-2">Total Submissions</p>
+                    <p id="admin-count" class="text-2xl font-black text-slate-800">0</p>
                 </div>
-            </div>
-            <div class="glass-card overflow-hidden">
-                <table class="w-full text-left">
-                    <thead class="bg-slate-50 text-xs font-bold text-slate-400">
-                        <tr><th class="p-4">Name</th><th class="p-4">Class</th><th class="p-4">WPM</th><th class="p-4">Acc</th><th class="p-4">Date</th></tr>
-                    </thead>
-                    <tbody id="admin-table"></tbody>
-                </table>
             </div>
         </div>
     </div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-        // ⚠️ REPLACE THIS WITH YOUR OWN FIREBASE CONFIG FROM FIREBASE CONSOLE
-        const firebaseConfig = {
-            apiKey: "AIzaSy...", 
-            authDomain: "your-app.firebaseapp.com",
-            projectId: "your-app-id",
-            storageBucket: "your-app.appspot.com",
-            messagingSenderId: "123456789",
-            appId: "1:123456789:web:abcdef"
-        };
-
+        const firebaseConfig = JSON.parse(__firebase_config);
         const fbApp = initializeApp(firebaseConfig);
         const db = getFirestore(fbApp);
         const auth = getAuth(fbApp);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'typing-pro-v2-universal';
 
-        const TEXT_BANKS = {
-            cartoon: ["Mickey Mouse is a funny animal cartoon character and the mascot of Disney.", "Marvel Avengers represent a group of powerful superheroes like Iron Man and Thor."],
-            tmkoc: ["Jethalal Gada is the main character who runs Gada Electronics.", "Daya Jethalal Gada is known for her signature laugh and energetic Garba."],
-            tech: ["Artificial intelligence is intelligence demonstrated by machines.", "Cloud computing is the on demand availability of computer system resources."]
+        const TEXTS = {
+            tech: [
+                "Artificial intelligence refers to the simulation of human intelligence by software and machines.",
+                "Cloud computing allows users to access powerful server resources and storage over the internet instantly.",
+                "Cybersecurity is the practice of protecting systems and networks from digital attacks and data theft."
+            ],
+            cartoon: [
+                "Mickey Mouse made his first public appearance in the short film Steamboat Willie in nineteen twenty eight.",
+                "The Flintstones was the first animated series to be broadcast in a prime time slot on American television.",
+                "Tom and Jerry is an American animated media franchise and series of comedy short films created in nineteen forty."
+            ],
+            tmkoc: [
+                "Jethalal Gada is the protagonist of the show and the owner of a popular shop called Gada Electronics.",
+                "Gokuldham Society is known for its unity and the way residents celebrate every festival together like a family.",
+                "Taarak Mehta is Jethalal's best friend and personal fire brigade who helps him out of every difficult situation."
+            ]
         };
 
         window.app = {
-            view: 'lobby', user: null, duration: 30, startTime: null, timer: null, userInput: "", targetText: "", dbRecords: [],
+            user: null,
+            state: 'lobby',
+            duration: 30,
+            startTime: null,
+            timer: null,
+            input: '',
+            target: '',
+            records: [],
 
             init() {
-                lucide.createIcons();
-                signInAnonymously(auth).catch(e => console.error("Auth Error:", e));
-                onAuthStateChanged(auth, u => { this.user = u; if(u) this.syncData(); });
+                this.setupAuth();
                 this.setupKeyboard();
+                lucide.createIcons();
             },
 
-            syncData() {
-                onSnapshot(collection(db, 'scores'), (snap) => {
-                    this.dbRecords = snap.docs.map(d => d.data());
-                    this.renderLeaderboard();
-                    this.renderAdmin();
-                });
+            async setupAuth() {
+                try {
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                    onAuthStateChanged(auth, u => {
+                        this.user = u;
+                        if (u) this.listen();
+                    });
+                } catch (e) { console.error("Auth failed", e); }
+            },
+
+            listen() {
+                const scoresCol = collection(db, 'artifacts', appId, 'public', 'data', 'scores');
+                onSnapshot(scoresCol, (snap) => {
+                    this.records = snap.docs.map(d => d.data());
+                    document.getElementById('admin-count').innerText = this.records.length;
+                }, (err) => console.error("Sync Error", err));
             },
 
             setupKeyboard() {
-                const input = document.getElementById('hidden-input');
-                input.addEventListener('input', (e) => {
-                    if (!this.startTime && e.target.value.length > 0) this.startTimer();
-                    this.userInput = e.target.value;
-                    this.updateUI();
+                const hidden = document.getElementById('hidden-input');
+                hidden.addEventListener('input', (e) => {
+                    this.input = e.target.value;
+                    if (!this.startTime && this.input.length > 0) this.start();
+                    this.renderChars();
+                    if (this.input.length >= this.target.length) this.finish();
+                });
+
+                hidden.addEventListener('blur', () => {
+                    if (this.state === 'arena') document.getElementById('focus-needed').classList.remove('hidden');
+                });
+                hidden.addEventListener('focus', () => {
+                    document.getElementById('focus-needed').classList.add('hidden');
+                });
+
+                window.addEventListener('keydown', (e) => {
+                    if (this.state === 'arena' && e.key === 'Escape') this.resetSession();
+                    if (this.state === 'lobby' && e.key === 'Enter') this.joinArena();
                 });
             },
 
-            switchView(name) {
-                this.view = name;
-                document.querySelectorAll('section, #view-teacher').forEach(s => s.classList.add('hidden'));
-                const el = document.getElementById(name === 'teacher' ? 'view-teacher' : `view-${name}`);
-                if (el) el.classList.remove('hidden');
-                if (name === 'arena') this.resetSession();
-                setTimeout(() => lucide.createIcons(), 50);
+            focusArena() {
+                document.getElementById('hidden-input').focus();
+            },
+
+            switchView(view) {
+                this.state = view;
+                document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
+                document.getElementById(`view-${view}`).classList.remove('hidden');
+                if (view === 'arena') this.resetSession();
+                lucide.createIcons();
             },
 
             joinArena() {
-                this.studentName = document.getElementById('input-name').value;
-                if (!this.studentName) return alert("Please enter name");
-                this.classId = document.getElementById('input-class').value || 'General';
+                const name = document.getElementById('input-name').value.trim();
+                if (!name) return;
+                
+                this.userName = name;
+                this.classId = document.getElementById('input-class').value || 'Open';
                 this.category = document.getElementById('input-category').value;
-                document.getElementById('nav-stats').style.display = 'flex';
-                document.getElementById('user-display').innerText = this.studentName;
-                document.getElementById('user-initials').innerText = this.studentName.slice(0,2).toUpperCase();
+
+                document.getElementById('user-pill').classList.remove('hidden');
+                document.getElementById('user-name-nav').innerText = name;
+                document.getElementById('user-icon').innerText = name[0].toUpperCase();
+
                 this.switchView('arena');
+            },
+
+            setDuration(sec, btn) {
+                this.duration = sec;
+                document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active-tab'));
+                btn.classList.add('active-tab');
+                this.resetSession();
             },
 
             resetSession() {
                 clearInterval(this.timer);
                 this.startTime = null;
-                this.userInput = "";
-                document.getElementById('hidden-input').value = "";
-                const bank = TEXT_BANKS[this.category];
-                this.targetText = bank[Math.floor(Math.random() * bank.length)];
-                document.getElementById('text-display').innerHTML = this.targetText.split('').map((c, i) => `<span class="char" id="c-${i}">${c}</span>`).join('');
+                this.input = '';
+                document.getElementById('hidden-input').value = '';
                 document.getElementById('stat-time').innerText = this.duration;
-                document.getElementById('hidden-input').focus();
+                document.getElementById('stat-wpm').innerText = '0';
+                document.getElementById('stat-acc').innerText = '100';
+
+                const pool = TEXTS[this.category] || TEXTS.tech;
+                this.target = pool[Math.floor(Math.random() * pool.length)];
+                
+                this.renderChars();
+                // Brief delay to allow mobile keyboard to settle
+                setTimeout(() => this.focusArena(), 300);
             },
 
-            startTimer() {
+            renderChars() {
+                const container = document.getElementById('text-display');
+                container.innerHTML = this.target.split('').map((c, i) => {
+                    let cls = 'char';
+                    if (i < this.input.length) {
+                        cls += this.input[i] === this.target[i] ? ' correct' : ' incorrect';
+                    } else if (i === this.input.length) {
+                        cls += ' current';
+                    }
+                    return `<span class="${cls}">${c}</span>`;
+                }).join('');
+            },
+
+            start() {
                 this.startTime = Date.now();
                 this.timer = setInterval(() => {
                     const elapsed = (Date.now() - this.startTime) / 1000;
                     const remaining = Math.max(0, this.duration - Math.floor(elapsed));
                     document.getElementById('stat-time').innerText = remaining;
-                    this.updateLiveStats(elapsed);
-                    if (remaining <= 0) this.endSession();
+                    
+                    const wpm = Math.round((this.input.length / 5) / (elapsed / 60)) || 0;
+                    document.getElementById('stat-wpm').innerText = wpm;
+
+                    if (remaining <= 0) this.finish();
                 }, 1000);
             },
 
-            updateUI() {
-                const spans = document.querySelectorAll('.char');
-                for (let i = 0; i < spans.length; i++) {
-                    if (i < this.userInput.length) {
-                        spans[i].className = (this.userInput[i] === this.targetText[i]) ? "char correct" : "char incorrect";
-                    } else {
-                        spans[i].className = (i === this.userInput.length) ? "char current" : "char";
-                    }
-                }
-                if (this.userInput.length >= this.targetText.length) this.endSession();
-            },
-
-            updateLiveStats(sec) {
-                const wpm = Math.round((this.userInput.length / 5) / (sec / 60)) || 0;
-                document.getElementById('stat-wpm').innerText = wpm;
-            },
-
-            async endSession() {
+            async finish() {
                 clearInterval(this.timer);
-                const wpm = parseInt(document.getElementById('stat-wpm').innerText);
-                const correct = document.querySelectorAll('.char.correct').length;
-                const acc = Math.round((correct / Math.max(1, this.userInput.length)) * 100);
-                const net = Math.round(wpm * (acc/100));
+                const finalWpm = parseInt(document.getElementById('stat-wpm').innerText);
+                let correct = 0;
+                for(let i=0; i<this.input.length; i++) if(this.input[i] === this.target[i]) correct++;
+                const finalAcc = Math.round((correct / Math.max(1, this.input.length)) * 100);
+                const net = Math.round(finalWpm * (finalAcc/100));
 
-                if (wpm > 5) {
-                    await addDoc(collection(db, 'scores'), {
-                        user: this.studentName, classId: this.classId, wpm, acc, net, date: new Date().toISOString()
-                    });
-                }
-                document.getElementById('res-wpm').innerText = wpm;
-                document.getElementById('res-acc').innerText = acc + "%";
+                document.getElementById('res-wpm').innerText = finalWpm;
+                document.getElementById('res-acc').innerText = finalAcc + "%";
                 document.getElementById('res-net').innerText = net;
+                document.getElementById('result-message').innerText = finalWpm > 40 ? "Excellent speed!" : "Keep practicing!";
+
+                if (this.user && finalWpm > 2) {
+                    try {
+                        const scoresCol = collection(db, 'artifacts', appId, 'public', 'data', 'scores');
+                        await addDoc(scoresCol, {
+                            name: this.userName,
+                            class: this.classId,
+                            wpm: finalWpm,
+                            acc: finalAcc,
+                            net: net,
+                            timestamp: new Date().toISOString()
+                        });
+                    } catch (e) { console.error("Save Error", e); }
+                }
+
                 this.switchView('results');
-            },
-
-            renderLeaderboard() {
-                const sorted = [...this.dbRecords].sort((a,b) => b.net - a.net).slice(0, 5);
-                document.getElementById('leaderboard-table').innerHTML = sorted.map((s, i) => `
-                    <tr class="border-b">
-                        <td class="p-6 font-bold">${i+1}</td>
-                        <td class="p-6">${s.user}</td>
-                        <td class="p-6 text-cyan-600 font-black">${s.net}</td>
-                        <td class="p-6">${s.acc}%</td>
-                    </tr>
-                `).join('');
-            },
-
-            renderAdmin() {
-                document.getElementById('admin-table').innerHTML = this.dbRecords.map(e => `
-                    <tr class="border-b">
-                        <td class="p-4">${e.user}</td><td class="p-4">${e.classId}</td>
-                        <td class="p-4 font-bold">${e.wpm}</td><td class="p-4">${e.acc}%</td>
-                        <td class="p-4 text-xs text-slate-400">${new Date(e.date).toLocaleDateString()}</td>
-                    </tr>
-                `).join('');
             },
 
             openSettings() { document.getElementById('modal-settings').classList.remove('hidden'); },
             closeSettings() { document.getElementById('modal-settings').classList.add('hidden'); },
-            showTeacherLogin() { document.getElementById('teacher-auth-section').classList.remove('hidden'); },
-            attemptTeacherLogin() {
-                if (document.getElementById('teacher-pass').value === '1234') {
-                    this.closeSettings();
-                    this.switchView('teacher');
-                } else alert("Wrong PIN");
+            
+            loginAdmin() {
+                const pin = document.getElementById('admin-pin').value;
+                if (pin === '1234') {
+                    document.getElementById('admin-auth').classList.add('hidden');
+                    document.getElementById('admin-panel').classList.remove('hidden');
+                } else {
+                    alert("Invalid PIN. Use 1234");
+                }
             },
+
             exportCSV() {
-                let csv = "User,Class,WPM,Acc,Date\n" + this.dbRecords.map(e => `"${e.user}","${e.classId}",${e.wpm},${e.acc},"${e.date}"`).join("\n");
-                const blob = new Blob([csv], { type: 'text/csv' });
+                const headers = "Name,Class,WPM,Accuracy,Net,Date\n";
+                const rows = this.records.map(r => `"${r.name}","${r.class}",${r.wpm},${r.acc},${r.net},"${r.timestamp}"`).join("\n");
+                const blob = new Blob([headers + rows], { type: 'text/csv' });
                 const url = URL.createObjectURL(blob);
-                const a = document.createElement('a'); a.href = url; a.download = 'scores.csv'; a.click();
-            },
-            setDuration(s, el) {
-                this.duration = s;
-                document.querySelectorAll('.time-opt').forEach(b => b.classList.remove('active-tab'));
-                el.classList.add('active-tab');
-                this.resetSession();
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `typing_arena_results.csv`;
+                a.click();
             }
         };
 
-        window.onload = () => app.init();
+        app.init();
     </script>
 </body>
 </html>
