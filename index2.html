@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TypingArena | Pro Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@0.400.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary: #06b6d4; --primary-dark: #0891b2; --bg-light: #f8fafc; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: var(--bg-light); color: #1e293b; overflow-x: hidden; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        .fade-in { animation: fadeIn 0.5s ease-out forwards; }
+        .slide-up { animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .scale-in { animation: scaleIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes scaleIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+        .glass-card { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.5); box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.04); border-radius: 24px; transition: all 0.3s ease; }
+        .char { position: relative; display: inline-block; transition: all 0.15s; color: #94a3b8; font-size: 1.75rem; line-height: 1.8; white-space: pre; }
+        .char.current { color: #0f172a; }
+        .char.current::after { content: ''; position: absolute; left: 0; bottom: 4px; width: 100%; height: 3px; background: var(--primary); animation: blink 0.8s infinite; }
+        .char.correct { color: var(--primary); }
+        .char.incorrect { color: #ef4444; background: rgba(239, 68, 68, 0.1); border-radius: 4px; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+        .active-tab { background: white; box-shadow: 0 4px 12px rgba(0,0,0,0.05); color: var(--primary-dark) !important; font-weight: 700; }
+        .btn-fancy { @apply relative overflow-hidden transition-all duration-300 active:scale-95; background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); color: white; }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <nav class="bg-white/80 backdrop-blur-md border-b border-slate-100 px-6 py-4 flex justify-between items-center sticky top-0 z-[100]">
+        <div class="flex items-center gap-3 cursor-pointer" onclick="app.switchView('lobby')">
+            <div class="bg-cyan-500 p-2 rounded-xl text-white">
+                <i data-lucide="keyboard" class="w-6 h-6"></i>
+            </div>
+            <span class="text-2xl font-extrabold tracking-tight text-slate-800">Typing<span class="text-cyan-500">Arena</span></span>
+        </div>
+        <div class="flex items-center gap-4">
+            <button onclick="app.switchView('leaderboard')" class="hidden md:flex items-center gap-2 px-4 py-2 text-sm font-bold text-slate-600">
+                <i data-lucide="trophy" class="w-4 h-4"></i> Rankings
+            </button>
+            <div id="nav-stats" class="hidden items-center gap-3 bg-slate-50 px-4 py-1.5 rounded-full border border-slate-100">
+                <div class="w-7 h-7 rounded-full bg-cyan-500 flex items-center justify-center text-white font-bold text-[10px]" id="user-initials">?</div>
+                <span id="user-display" class="text-xs font-bold text-slate-600">Guest</span>
+            </div>
+            <button onclick="app.openSettings()" class="p-2.5 hover:bg-slate-100 rounded-xl text-slate-500">
+                <i data-lucide="settings" class="w-5 h-5"></i>
+            </button>
+        </div>
+    </nav>
+
+    <main class="container mx-auto px-4 py-12 max-w-5xl">
+        <section id="view-lobby" class="max-w-xl mx-auto space-y-10 slide-up">
+            <div class="text-center space-y-4">
+                <h2 class="text-5xl font-black text-slate-900">Master the <span class="text-cyan-500">Keyboard.</span></h2>
+            </div>
+            <div class="glass-card p-10 space-y-8">
+                <input type="text" id="input-name" placeholder="Full Name" class="w-full bg-slate-50 border p-4 rounded-2xl">
+                <input type="text" id="input-class" placeholder="Classroom ID (Optional)" class="w-full bg-slate-50 border p-4 rounded-2xl">
+                <select id="input-category" class="w-full bg-slate-50 border p-4 rounded-2xl">
+                    <option value="cartoon">Cartoon GK</option>
+                    <option value="tmkoc">Taarak Mehta Series</option>
+                    <option value="tech">Tech & Trends</option>
+                </select>
+                <button onclick="app.joinArena()" class="w-full btn-fancy font-extrabold py-5 rounded-2xl uppercase">Enter the Arena</button>
+            </div>
+        </section>
+
+        <section id="view-arena" class="hidden space-y-8 fade-in">
+            <div class="flex justify-center p-1.5 bg-slate-100 rounded-2xl w-fit mx-auto">
+                <button class="time-opt px-8 py-2.5 rounded-xl active-tab" onclick="app.setDuration(15, this)">15s</button>
+                <button class="time-opt px-8 py-2.5 rounded-xl" onclick="app.setDuration(30, this)">30s</button>
+                <button class="time-opt px-8 py-2.5 rounded-xl" onclick="app.setDuration(60, this)">60s</button>
+            </div>
+            <div class="grid grid-cols-3 gap-6 max-w-4xl mx-auto text-center">
+                <div class="glass-card p-4">
+                    <p class="text-xs text-slate-400 font-bold uppercase">Time</p>
+                    <span id="stat-time" class="text-4xl font-black text-cyan-500">30</span>
+                </div>
+                <div class="glass-card p-4">
+                    <p class="text-xs text-slate-400 font-bold uppercase">WPM</p>
+                    <span id="stat-wpm" class="text-4xl font-black">0</span>
+                </div>
+                <div class="glass-card p-4">
+                    <p class="text-xs text-slate-400 font-bold uppercase">Accuracy</p>
+                    <span class="text-4xl font-black"><span id="stat-acc">100</span>%</span>
+                </div>
+            </div>
+            <div class="relative glass-card p-16 mt-10 min-h-[320px] flex items-center justify-center">
+                <div id="text-display" class="text-center font-medium mono select-none leading-relaxed"></div>
+                <input type="text" id="hidden-input" class="absolute inset-0 opacity-0 cursor-default" autofocus autocomplete="off">
+            </div>
+        </section>
+
+        <section id="view-results" class="hidden max-w-4xl mx-auto space-y-10 scale-in">
+            <div class="text-center"><h2 class="text-4xl font-black">Performance Report</h2></div>
+            <div class="grid grid-cols-3 gap-8">
+                <div class="glass-card p-10 text-center"><div class="text-6xl font-black text-cyan-500" id="res-wpm">0</div><div class="text-xs font-bold text-slate-400 uppercase">Gross WPM</div></div>
+                <div class="glass-card p-10 text-center"><div class="text-6xl font-black text-emerald-500" id="res-acc">0%</div><div class="text-xs font-bold text-slate-400 uppercase">Precision</div></div>
+                <div class="glass-card p-10 text-center bg-slate-900 text-white"><div class="text-6xl font-black" id="res-net">0</div><div class="text-xs font-bold uppercase opacity-60">Net Score</div></div>
+            </div>
+            <div class="flex justify-center gap-4">
+                <button onclick="app.switchView('arena')" class="btn-fancy px-12 py-5 rounded-2xl font-bold uppercase">Retry</button>
+                <button onclick="app.switchView('lobby')" class="bg-white border px-12 py-5 rounded-2xl font-bold uppercase">Main Menu</button>
+            </div>
+        </section>
+
+        <section id="view-leaderboard" class="hidden space-y-8 max-w-3xl mx-auto fade-in">
+            <div class="text-center"><h2 class="text-3xl font-black">Leaderboard</h2></div>
+            <div class="glass-card overflow-hidden">
+                <table class="w-full text-left">
+                    <thead class="bg-slate-50 text-xs font-black text-slate-400 uppercase">
+                        <tr><th class="p-6">Rank</th><th class="p-6">Competitor</th><th class="p-6">Net WPM</th><th class="p-6">Acc</th></tr>
+                    </thead>
+                    <tbody id="leaderboard-table"></tbody>
+                </table>
+            </div>
+            <button onclick="app.switchView('lobby')" class="w-full text-cyan-600 font-bold uppercase text-xs">Back to Lobby</button>
+        </section>
+    </main>
+
+    <div id="modal-settings" class="hidden fixed inset-0 z-[150] backdrop-blur-md bg-slate-900/20 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-[32px] p-10 space-y-8 relative">
+            <button onclick="app.closeSettings()" class="absolute top-8 right-8 text-slate-300"><i data-lucide="x" class="w-6 h-6"></i></button>
+            <h3 class="text-2xl font-black">Control Panel</h3>
+            <div class="space-y-4">
+                <button onclick="app.showTeacherLogin()" class="w-full bg-slate-50 p-6 rounded-3xl text-left font-bold">Teacher Console</button>
+                <div id="teacher-auth-section" class="hidden space-y-4 pt-4">
+                    <input type="password" id="teacher-pass" placeholder="PIN" class="w-full border p-4 rounded-xl text-center text-2xl">
+                    <button onclick="app.attemptTeacherLogin()" class="w-full btn-fancy py-3 rounded-xl">Login</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="view-teacher" class="hidden fixed inset-0 bg-white z-[200] p-10 overflow-auto">
+        <div class="max-w-5xl mx-auto space-y-8">
+            <div class="flex justify-between items-center">
+                <h2 class="text-4xl font-black">Admin Panel</h2>
+                <div class="flex gap-4">
+                    <button onclick="app.exportCSV()" class="bg-slate-100 px-6 py-3 rounded-xl font-bold">Export CSV</button>
+                    <button onclick="app.switchView('lobby')" class="bg-slate-900 text-white px-6 py-3 rounded-xl font-bold">Logout</button>
+                </div>
+            </div>
+            <div class="glass-card overflow-hidden">
+                <table class="w-full text-left">
+                    <thead class="bg-slate-50 text-xs font-bold text-slate-400">
+                        <tr><th class="p-4">Name</th><th class="p-4">Class</th><th class="p-4">WPM</th><th class="p-4">Acc</th><th class="p-4">Date</th></tr>
+                    </thead>
+                    <tbody id="admin-table"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+        // ⚠️ REPLACE THIS WITH YOUR OWN FIREBASE CONFIG FROM FIREBASE CONSOLE
+        const firebaseConfig = {
+            apiKey: "AIzaSy...", 
+            authDomain: "your-app.firebaseapp.com",
+            projectId: "your-app-id",
+            storageBucket: "your-app.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:abcdef"
+        };
+
+        const fbApp = initializeApp(firebaseConfig);
+        const db = getFirestore(fbApp);
+        const auth = getAuth(fbApp);
+
+        const TEXT_BANKS = {
+            cartoon: ["Mickey Mouse is a funny animal cartoon character and the mascot of Disney.", "Marvel Avengers represent a group of powerful superheroes like Iron Man and Thor."],
+            tmkoc: ["Jethalal Gada is the main character who runs Gada Electronics.", "Daya Jethalal Gada is known for her signature laugh and energetic Garba."],
+            tech: ["Artificial intelligence is intelligence demonstrated by machines.", "Cloud computing is the on demand availability of computer system resources."]
+        };
+
+        window.app = {
+            view: 'lobby', user: null, duration: 30, startTime: null, timer: null, userInput: "", targetText: "", dbRecords: [],
+
+            init() {
+                lucide.createIcons();
+                signInAnonymously(auth).catch(e => console.error("Auth Error:", e));
+                onAuthStateChanged(auth, u => { this.user = u; if(u) this.syncData(); });
+                this.setupKeyboard();
+            },
+
+            syncData() {
+                onSnapshot(collection(db, 'scores'), (snap) => {
+                    this.dbRecords = snap.docs.map(d => d.data());
+                    this.renderLeaderboard();
+                    this.renderAdmin();
+                });
+            },
+
+            setupKeyboard() {
+                const input = document.getElementById('hidden-input');
+                input.addEventListener('input', (e) => {
+                    if (!this.startTime && e.target.value.length > 0) this.startTimer();
+                    this.userInput = e.target.value;
+                    this.updateUI();
+                });
+            },
+
+            switchView(name) {
+                this.view = name;
+                document.querySelectorAll('section, #view-teacher').forEach(s => s.classList.add('hidden'));
+                const el = document.getElementById(name === 'teacher' ? 'view-teacher' : `view-${name}`);
+                if (el) el.classList.remove('hidden');
+                if (name === 'arena') this.resetSession();
+                setTimeout(() => lucide.createIcons(), 50);
+            },
+
+            joinArena() {
+                this.studentName = document.getElementById('input-name').value;
+                if (!this.studentName) return alert("Please enter name");
+                this.classId = document.getElementById('input-class').value || 'General';
+                this.category = document.getElementById('input-category').value;
+                document.getElementById('nav-stats').style.display = 'flex';
+                document.getElementById('user-display').innerText = this.studentName;
+                document.getElementById('user-initials').innerText = this.studentName.slice(0,2).toUpperCase();
+                this.switchView('arena');
+            },
+
+            resetSession() {
+                clearInterval(this.timer);
+                this.startTime = null;
+                this.userInput = "";
+                document.getElementById('hidden-input').value = "";
+                const bank = TEXT_BANKS[this.category];
+                this.targetText = bank[Math.floor(Math.random() * bank.length)];
+                document.getElementById('text-display').innerHTML = this.targetText.split('').map((c, i) => `<span class="char" id="c-${i}">${c}</span>`).join('');
+                document.getElementById('stat-time').innerText = this.duration;
+                document.getElementById('hidden-input').focus();
+            },
+
+            startTimer() {
+                this.startTime = Date.now();
+                this.timer = setInterval(() => {
+                    const elapsed = (Date.now() - this.startTime) / 1000;
+                    const remaining = Math.max(0, this.duration - Math.floor(elapsed));
+                    document.getElementById('stat-time').innerText = remaining;
+                    this.updateLiveStats(elapsed);
+                    if (remaining <= 0) this.endSession();
+                }, 1000);
+            },
+
+            updateUI() {
+                const spans = document.querySelectorAll('.char');
+                for (let i = 0; i < spans.length; i++) {
+                    if (i < this.userInput.length) {
+                        spans[i].className = (this.userInput[i] === this.targetText[i]) ? "char correct" : "char incorrect";
+                    } else {
+                        spans[i].className = (i === this.userInput.length) ? "char current" : "char";
+                    }
+                }
+                if (this.userInput.length >= this.targetText.length) this.endSession();
+            },
+
+            updateLiveStats(sec) {
+                const wpm = Math.round((this.userInput.length / 5) / (sec / 60)) || 0;
+                document.getElementById('stat-wpm').innerText = wpm;
+            },
+
+            async endSession() {
+                clearInterval(this.timer);
+                const wpm = parseInt(document.getElementById('stat-wpm').innerText);
+                const correct = document.querySelectorAll('.char.correct').length;
+                const acc = Math.round((correct / Math.max(1, this.userInput.length)) * 100);
+                const net = Math.round(wpm * (acc/100));
+
+                if (wpm > 5) {
+                    await addDoc(collection(db, 'scores'), {
+                        user: this.studentName, classId: this.classId, wpm, acc, net, date: new Date().toISOString()
+                    });
+                }
+                document.getElementById('res-wpm').innerText = wpm;
+                document.getElementById('res-acc').innerText = acc + "%";
+                document.getElementById('res-net').innerText = net;
+                this.switchView('results');
+            },
+
+            renderLeaderboard() {
+                const sorted = [...this.dbRecords].sort((a,b) => b.net - a.net).slice(0, 5);
+                document.getElementById('leaderboard-table').innerHTML = sorted.map((s, i) => `
+                    <tr class="border-b">
+                        <td class="p-6 font-bold">${i+1}</td>
+                        <td class="p-6">${s.user}</td>
+                        <td class="p-6 text-cyan-600 font-black">${s.net}</td>
+                        <td class="p-6">${s.acc}%</td>
+                    </tr>
+                `).join('');
+            },
+
+            renderAdmin() {
+                document.getElementById('admin-table').innerHTML = this.dbRecords.map(e => `
+                    <tr class="border-b">
+                        <td class="p-4">${e.user}</td><td class="p-4">${e.classId}</td>
+                        <td class="p-4 font-bold">${e.wpm}</td><td class="p-4">${e.acc}%</td>
+                        <td class="p-4 text-xs text-slate-400">${new Date(e.date).toLocaleDateString()}</td>
+                    </tr>
+                `).join('');
+            },
+
+            openSettings() { document.getElementById('modal-settings').classList.remove('hidden'); },
+            closeSettings() { document.getElementById('modal-settings').classList.add('hidden'); },
+            showTeacherLogin() { document.getElementById('teacher-auth-section').classList.remove('hidden'); },
+            attemptTeacherLogin() {
+                if (document.getElementById('teacher-pass').value === '1234') {
+                    this.closeSettings();
+                    this.switchView('teacher');
+                } else alert("Wrong PIN");
+            },
+            exportCSV() {
+                let csv = "User,Class,WPM,Acc,Date\n" + this.dbRecords.map(e => `"${e.user}","${e.classId}",${e.wpm},${e.acc},"${e.date}"`).join("\n");
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a'); a.href = url; a.download = 'scores.csv'; a.click();
+            },
+            setDuration(s, el) {
+                this.duration = s;
+                document.querySelectorAll('.time-opt').forEach(b => b.classList.remove('active-tab'));
+                el.classList.add('active-tab');
+                this.resetSession();
+            }
+        };
+
+        window.onload = () => app.init();
+    </script>
+</body>
+</html>
