@@ -7,237 +7,326 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #00acc1;
-            --secondary: #26a69a;
-            --bg-light: #f4f7f6;
-            --text-dark: #37474f;
+            --primary: #06b6d4;
+            --primary-dark: #0891b2;
+            --bg-light: #f8fafc;
         }
-        body { font-family: 'Inter', sans-serif; background-color: var(--bg-light); color: var(--text-dark); }
+        
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background-color: var(--bg-light); 
+            color: #1e293b;
+            overflow-x: hidden;
+        }
+
         .mono { font-family: 'JetBrains Mono', monospace; }
-        .glass-card { background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border: 1px solid #e0e0e0; }
+
+        /* Smooth Animations */
+        .fade-in { animation: fadeIn 0.5s ease-out forwards; }
+        .slide-up { animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .scale-in { animation: scaleIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
         
-        #text-container { max-height: 200px; overflow-y: hidden; position: relative; }
-        .char { position: relative; display: inline-block; transition: all 0.1s; border-bottom: 2px solid transparent; white-space: pre; color: #90a4ae; font-size: 1.5rem; line-height: 2; }
-        .char.current { color: #263238; background: rgba(0, 172, 193, 0.1); }
-        .char.current::after { 
-            content: ''; position: absolute; left: 0; bottom: 0; width: 100%; height: 3px; 
-            background: var(--primary); animation: blink 1s infinite; 
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes scaleIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+
+        /* Glassmorphism & Cards */
+        .glass-card { 
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.04);
+            border-radius: 24px;
+            transition: all 0.3s ease;
         }
-        .char.correct { color: #00acc1; }
-        .char.incorrect { color: #ff5252; background: rgba(255, 82, 82, 0.1); border-bottom: 2px solid #ff5252; }
-        @keyframes blink { 50% { opacity: 0; } }
+        .glass-card:hover { transform: translateY(-2px); box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.08); }
+
+        /* Typing Elements */
+        .char { 
+            position: relative; 
+            display: inline-block; 
+            transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+            color: #94a3b8; 
+            font-size: 1.75rem; 
+            line-height: 1.8;
+            white-space: pre;
+        }
+        .char.current { color: #0f172a; }
+        .char.current::after { 
+            content: ''; position: absolute; left: 0; bottom: 4px; width: 100%; height: 3px; 
+            background: var(--primary); border-radius: 2px; animation: blink 0.8s infinite; 
+        }
+        .char.correct { color: var(--primary); }
+        .char.incorrect { color: #ef4444; background: rgba(239, 68, 68, 0.1); border-radius: 4px; }
         
-        .active-tab { border-bottom: 3px solid var(--primary); color: var(--primary) !important; font-weight: 700; }
-        .custom-scroll::-webkit-scrollbar { width: 6px; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: #cfd8dc; border-radius: 10px; }
-        
-        .btn-primary { background: var(--primary); color: white; transition: all 0.2s; }
-        .btn-primary:hover { background: #0097a7; transform: translateY(-1px); }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+        .active-tab { 
+            background: white; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            color: var(--primary-dark) !important;
+            font-weight: 700;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; border: 2px solid var(--bg-light); }
+
+        .stat-badge {
+            @apply flex flex-col items-center justify-center p-6 glass-card border-none;
+        }
+
+        .btn-fancy {
+            @apply relative overflow-hidden transition-all duration-300 active:scale-95;
+            background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+        }
+        .btn-fancy::before {
+            content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: 0.5s;
+        }
+        .btn-fancy:hover::before { left: 100%; }
     </style>
 </head>
-<body class="min-h-screen">
+<body class="min-h-screen selection:bg-cyan-100 selection:text-cyan-900">
 
-    <!-- TOP BAR -->
-    <nav class="bg-white border-b border-gray-200 px-6 py-3 flex justify-between items-center sticky top-0 z-50">
-        <div class="flex items-center gap-3 cursor-pointer" onclick="app.switchView('lobby')">
-            <div class="bg-cyan-600 p-1.5 rounded-lg">
-                <i data-lucide="keyboard" class="text-white w-5 h-5"></i>
+    <!-- NAVIGATION -->
+    <nav class="bg-white/80 backdrop-blur-md border-b border-slate-100 px-6 py-4 flex justify-between items-center sticky top-0 z-[100]">
+        <div class="flex items-center gap-3 cursor-pointer group" onclick="app.switchView('lobby')">
+            <div class="bg-gradient-to-br from-cyan-400 to-cyan-600 p-2 rounded-xl shadow-lg shadow-cyan-200 group-hover:scale-110 transition-transform">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="2" y="4" width="20" height="16" rx="3" stroke="white" stroke-width="2"/>
+                    <path d="M6 8H7M10 8H11M14 8H15M17 8H18M6 12H7M10 12H11M14 12H15M17 12H18M7 16H17" stroke="white" stroke-width="2" stroke-linecap="round"/>
+                </svg>
             </div>
-            <span class="text-xl font-bold tracking-tight text-slate-800">Typing<span class="text-cyan-600">Arena</span></span>
+            <span class="text-2xl font-extrabold tracking-tight text-slate-800">Typing<span class="text-cyan-500">Arena</span></span>
         </div>
-        <div class="flex items-center gap-6">
-            <button onclick="app.switchView('leaderboard')" class="text-sm font-semibold text-slate-500 hover:text-cyan-600 flex items-center gap-1.5">
-                <i data-lucide="award" class="w-4 h-4"></i> Leaderboard
+        
+        <div class="flex items-center gap-4">
+            <button onclick="app.switchView('leaderboard')" class="hidden md:flex items-center gap-2 px-4 py-2 text-sm font-bold text-slate-600 hover:text-cyan-600 transition-colors">
+                <i data-lucide="trophy" class="w-4 h-4"></i> Rankings
             </button>
-            <div id="nav-stats" class="hidden md:flex items-center gap-2 border-l pl-6 border-gray-200">
-                <div class="w-8 h-8 rounded-full bg-cyan-100 flex items-center justify-center text-cyan-700 font-bold text-xs" id="user-initials">?</div>
-                <span id="user-display" class="text-sm font-medium text-slate-700"></span>
+            <div id="nav-stats" class="hidden items-center gap-3 bg-slate-50 px-4 py-1.5 rounded-full border border-slate-100">
+                <div class="w-7 h-7 rounded-full bg-cyan-500 flex items-center justify-center text-white font-bold text-[10px]" id="user-initials">?</div>
+                <span id="user-display" class="text-xs font-bold text-slate-600">Guest</span>
             </div>
-            <button onclick="app.openSettings()" class="p-2 hover:bg-gray-100 rounded-full text-slate-400 transition-colors">
-                <i data-lucide="menu" class="w-5 h-5"></i>
+            <button onclick="app.openSettings()" class="p-2.5 hover:bg-slate-100 rounded-xl text-slate-500 transition-all active:bg-slate-200">
+                <i data-lucide="layout-grid" class="w-5 h-5"></i>
             </button>
         </div>
     </nav>
 
-    <main class="container mx-auto px-4 py-8 max-w-5xl">
+    <main class="container mx-auto px-4 py-12 max-w-5xl">
         
         <!-- VIEW: LOBBY -->
-        <section id="view-lobby" class="max-w-xl mx-auto space-y-8 mt-10">
-            <div class="text-center space-y-3">
-                <h2 class="text-4xl font-black text-slate-800">Start Your Test</h2>
-                <p class="text-slate-500">Choose a category and show your skills.</p>
+        <section id="view-lobby" class="max-w-xl mx-auto space-y-10 slide-up">
+            <div class="text-center space-y-4">
+                <span class="inline-block px-4 py-1.5 bg-cyan-50 text-cyan-600 text-[10px] font-black uppercase tracking-[0.2em] rounded-full">Training Ground</span>
+                <h2 class="text-5xl font-black text-slate-900 leading-tight">Master the <span class="text-cyan-500">Keyboard.</span></h2>
+                <p class="text-slate-500 font-medium">Professional typing assessments for students and enthusiasts.</p>
             </div>
 
-            <div class="glass-card p-8 space-y-6">
-                <div class="space-y-4">
-                    <div>
-                        <label class="text-xs font-bold uppercase text-slate-400 mb-1 block">Your Name</label>
-                        <input type="text" id="input-name" placeholder="Enter Full Name" class="w-full bg-slate-50 border border-slate-200 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all">
+            <div class="glass-card p-10 space-y-8 border-none ring-1 ring-slate-200 shadow-xl">
+                <div class="grid grid-cols-1 gap-6">
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Full Name</label>
+                        <input type="text" id="input-name" placeholder="Who is typing?" class="w-full bg-slate-50/50 border border-slate-200 p-4 rounded-2xl focus:outline-none focus:ring-4 focus:ring-cyan-500/10 focus:border-cyan-500 transition-all font-semibold">
                     </div>
-                    <div>
-                        <label class="text-xs font-bold uppercase text-slate-400 mb-1 block">Classroom / Group ID</label>
-                        <input type="text" id="input-class" placeholder="Optional" class="w-full bg-slate-50 border border-slate-200 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all">
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Classroom ID</label>
+                        <input type="text" id="input-class" placeholder="Optional Group Name" class="w-full bg-slate-50/50 border border-slate-200 p-4 rounded-2xl focus:outline-none focus:ring-4 focus:ring-cyan-500/10 focus:border-cyan-500 transition-all font-semibold">
                     </div>
-                    <div>
-                        <label class="text-xs font-bold uppercase text-slate-400 mb-1 block">Category</label>
-                        <select id="input-category" class="w-full bg-slate-50 border border-slate-200 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all">
-                            <option value="cartoon">Cartoon GK (Disney, Marvel, etc.)</option>
-                            <option value="tmkoc">Taarak Mehta Ka Ooltah Chashmah</option>
-                            <option value="tech">Technology & Coding</option>
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Session Category</label>
+                        <select id="input-category" class="w-full bg-slate-50/50 border border-slate-200 p-4 rounded-2xl focus:outline-none focus:ring-4 focus:ring-cyan-500/10 focus:border-cyan-500 transition-all font-semibold appearance-none">
+                            <option value="cartoon">Cartoon GK (Disney, Marvel)</option>
+                            <option value="tmkoc">Taarak Mehta Series</option>
+                            <option value="tech">Tech & Future Trends</option>
                         </select>
                     </div>
                 </div>
-                <button onclick="app.joinArena()" class="w-full btn-primary font-bold py-4 rounded-xl shadow-lg shadow-cyan-500/20 uppercase tracking-wider text-sm">
-                    Start Typing Test
+                <button onclick="app.joinArena()" class="w-full btn-fancy text-white font-extrabold py-5 rounded-2xl shadow-2xl shadow-cyan-500/30 uppercase tracking-widest text-sm flex items-center justify-center gap-3">
+                    Enter the Arena <i data-lucide="arrow-right" class="w-5 h-5"></i>
                 </button>
             </div>
         </section>
 
         <!-- VIEW: ARENA -->
-        <section id="view-arena" class="hidden space-y-6">
-            <!-- Tabs for Duration -->
-            <div class="flex justify-center border-b border-gray-200 mb-6">
-                <button class="time-opt px-8 py-3 text-sm font-medium text-slate-400 hover:text-slate-600 active-tab" onclick="app.setDuration(15, this)">15 Seconds</button>
-                <button class="time-opt px-8 py-3 text-sm font-medium text-slate-400 hover:text-slate-600" onclick="app.setDuration(30, this)">30 Seconds</button>
-                <button class="time-opt px-8 py-3 text-sm font-medium text-slate-400 hover:text-slate-600" onclick="app.setDuration(60, this)">1 Minute</button>
+        <section id="view-arena" class="hidden space-y-8 fade-in">
+            <!-- Duration Selector -->
+            <div class="flex justify-center p-1.5 bg-slate-100 rounded-2xl w-fit mx-auto mb-10">
+                <button class="time-opt px-8 py-2.5 rounded-xl text-xs font-bold text-slate-500 transition-all active-tab" onclick="app.setDuration(15, this)">15s</button>
+                <button class="time-opt px-8 py-2.5 rounded-xl text-xs font-bold text-slate-500 transition-all" onclick="app.setDuration(30, this)">30s</button>
+                <button class="time-opt px-8 py-2.5 rounded-xl text-xs font-bold text-slate-500 transition-all" onclick="app.setDuration(60, this)">60s</button>
             </div>
 
-            <!-- Floating Stats (Mobile Responsive) -->
-            <div class="grid grid-cols-3 gap-4 md:gap-8 max-w-3xl mx-auto">
-                <div class="glass-card p-4 text-center">
-                    <div class="text-[10px] text-slate-400 uppercase font-bold mb-1">Time Left</div>
-                    <div class="text-3xl font-black text-cyan-600" id="stat-time">30</div>
+            <!-- Stats Bar -->
+            <div class="grid grid-cols-3 gap-6 max-w-4xl mx-auto">
+                <div class="stat-badge">
+                    <span class="text-[10px] text-slate-400 uppercase font-black tracking-widest mb-1">Time Remaining</span>
+                    <span class="text-4xl font-black text-cyan-500 tabular-nums" id="stat-time">30</span>
                 </div>
-                <div class="glass-card p-4 text-center">
-                    <div class="text-[10px] text-slate-400 uppercase font-bold mb-1">Speed (WPM)</div>
-                    <div class="text-3xl font-black text-slate-800" id="stat-wpm">0</div>
+                <div class="stat-badge">
+                    <span class="text-[10px] text-slate-400 uppercase font-black tracking-widest mb-1">Live WPM</span>
+                    <span class="text-4xl font-black text-slate-800 tabular-nums" id="stat-wpm">0</span>
                 </div>
-                <div class="glass-card p-4 text-center">
-                    <div class="text-[10px] text-slate-400 uppercase font-bold mb-1">Accuracy</div>
-                    <div class="text-3xl font-black text-slate-800"><span id="stat-acc">100</span>%</div>
+                <div class="stat-badge">
+                    <span class="text-[10px] text-slate-400 uppercase font-black tracking-widest mb-1">Accuracy</span>
+                    <span class="text-4xl font-black text-slate-800 tabular-nums"><span id="stat-acc">100</span>%</span>
                 </div>
             </div>
 
-            <!-- The Arena -->
-            <div class="relative glass-card p-12 mt-8 min-h-[280px] flex items-center justify-center overflow-hidden">
+            <!-- Display -->
+            <div class="relative glass-card p-16 mt-10 min-h-[320px] flex items-center justify-center border-none shadow-2xl shadow-slate-200/50">
                 <div id="text-container" class="w-full max-w-4xl">
-                    <div id="text-display" class="text-center font-medium mono select-none transition-transform duration-300"></div>
+                    <div id="text-display" class="text-center font-medium mono select-none transition-transform duration-500 leading-relaxed"></div>
                 </div>
-                <!-- Real-time hidden input -->
                 <input type="text" id="hidden-input" class="absolute inset-0 opacity-0 cursor-default" autofocus autocomplete="off" spellcheck="false">
             </div>
 
-            <div class="text-center">
-                <p class="text-slate-400 text-xs font-medium flex items-center justify-center gap-2">
-                    <i data-lucide="info" class="w-3 h-3"></i> Press <span class="px-1.5 py-0.5 bg-gray-200 rounded border text-slate-600">Enter</span> to restart
-                </p>
+            <div class="flex justify-center gap-8">
+                <div class="flex items-center gap-2 text-slate-400 text-[10px] font-bold uppercase tracking-widest">
+                    <i data-lucide="keyboard" class="w-4 h-4"></i> Start Typing to Begin
+                </div>
+                <div class="flex items-center gap-2 text-slate-400 text-[10px] font-bold uppercase tracking-widest">
+                    <i data-lucide="corner-down-left" class="w-4 h-4"></i> Enter to Restart
+                </div>
             </div>
         </section>
 
         <!-- VIEW: RESULTS -->
-        <section id="view-results" class="hidden max-w-4xl mx-auto space-y-8">
-            <div class="text-center">
-                <h2 class="text-3xl font-black text-slate-800 mb-2">Test Score</h2>
-                <p class="text-slate-500">Great job! Here is how you performed.</p>
+        <section id="view-results" class="hidden max-w-4xl mx-auto space-y-10 scale-in">
+            <div class="text-center space-y-2">
+                <div class="w-20 h-20 bg-cyan-100 text-cyan-600 rounded-3xl mx-auto flex items-center justify-center mb-4">
+                    <i data-lucide="sparkles" class="w-10 h-10"></i>
+                </div>
+                <h2 class="text-4xl font-black text-slate-900">Performance Report</h2>
+                <p class="text-slate-500 font-medium">Data verified and synced to cloud.</p>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div class="glass-card p-8 flex flex-col items-center justify-center relative overflow-hidden">
-                    <div class="absolute top-0 right-0 p-2 opacity-5"><i data-lucide="zap" class="w-20 h-20"></i></div>
-                    <div class="text-5xl font-black text-cyan-600" id="res-wpm">0</div>
-                    <div class="text-xs font-bold text-slate-400 uppercase mt-2">Gross WPM</div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="glass-card p-10 flex flex-col items-center justify-center relative overflow-hidden border-none bg-white">
+                    <div class="text-6xl font-black text-cyan-500 mb-2 tabular-nums" id="res-wpm">0</div>
+                    <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Gross Speed</div>
                 </div>
-                <div class="glass-card p-8 flex flex-col items-center justify-center relative overflow-hidden">
-                    <div class="absolute top-0 right-0 p-2 opacity-5"><i data-lucide="check-circle" class="w-20 h-20"></i></div>
-                    <div class="text-5xl font-black text-teal-600" id="res-acc">0%</div>
-                    <div class="text-xs font-bold text-slate-400 uppercase mt-2">Accuracy</div>
+                <div class="glass-card p-10 flex flex-col items-center justify-center relative overflow-hidden border-none bg-white">
+                    <div class="text-6xl font-black text-emerald-500 mb-2 tabular-nums" id="res-acc">0%</div>
+                    <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Precision</div>
                 </div>
-                <div class="glass-card p-8 flex flex-col items-center justify-center bg-cyan-600 text-white border-none shadow-cyan-200">
-                    <div class="text-5xl font-black" id="res-net">0</div>
-                    <div class="text-xs font-bold uppercase mt-2 opacity-80">Net Speed (WPM)</div>
+                <div class="glass-card p-10 flex flex-col items-center justify-center bg-slate-900 text-white border-none shadow-2xl shadow-slate-900/20">
+                    <div class="text-6xl font-black tabular-nums" id="res-net">0</div>
+                    <div class="text-[10px] font-black uppercase tracking-widest mt-2 opacity-60">Net WPM Score</div>
                 </div>
             </div>
 
-            <div class="flex flex-col md:flex-row gap-4 justify-center pt-6">
-                <button onclick="app.switchView('arena')" class="btn-primary px-10 py-4 rounded-xl font-bold uppercase text-sm flex items-center justify-center gap-2">
-                    <i data-lucide="refresh-cw" class="w-4 h-4"></i> Retake Test
+            <div class="flex flex-col md:flex-row gap-4 justify-center pt-8">
+                <button onclick="app.switchView('arena')" class="btn-fancy text-white px-12 py-5 rounded-2xl font-extrabold uppercase text-xs tracking-widest flex items-center justify-center gap-3">
+                    <i data-lucide="refresh-cw" class="w-4 h-4"></i> Run it Back
                 </button>
-                <button onclick="app.switchView('lobby')" class="bg-white border border-gray-300 text-slate-600 px-10 py-4 rounded-xl font-bold uppercase text-sm hover:bg-gray-50">
-                    New Category
+                <button onclick="app.switchView('lobby')" class="bg-white border-2 border-slate-100 text-slate-600 px-12 py-5 rounded-2xl font-extrabold uppercase text-xs tracking-widest hover:bg-slate-50 transition-colors">
+                    Switch Category
                 </button>
             </div>
         </section>
 
         <!-- VIEW: LEADERBOARD -->
-        <section id="view-leaderboard" class="hidden space-y-6 max-w-2xl mx-auto">
-            <h2 class="text-3xl font-bold text-center text-slate-800">Top Performers</h2>
-            <div class="glass-card overflow-hidden">
+        <section id="view-leaderboard" class="hidden space-y-8 max-w-3xl mx-auto fade-in">
+            <div class="text-center space-y-2">
+                <h2 class="text-3xl font-black text-slate-900">Elite Arena Members</h2>
+                <p class="text-slate-500">Live rankings from all participants worldwide.</p>
+            </div>
+            <div class="glass-card overflow-hidden border-none ring-1 ring-slate-100">
                 <table class="w-full text-left">
-                    <thead class="bg-slate-50 text-[10px] uppercase font-bold text-slate-400 border-b">
-                        <tr><th class="p-5">Rank</th><th class="p-5">Name</th><th class="p-5">WPM</th><th class="p-5">Accuracy</th></tr>
+                    <thead class="bg-slate-50/50 text-[10px] uppercase font-black text-slate-400 tracking-widest border-b border-slate-100">
+                        <tr><th class="p-6">Rank</th><th class="p-6">Competitor</th><th class="p-6 text-center">Net WPM</th><th class="p-6">Accuracy</th></tr>
                     </thead>
-                    <tbody id="leaderboard-table" class="divide-y divide-gray-100"></tbody>
+                    <tbody id="leaderboard-table" class="divide-y divide-slate-50"></tbody>
                 </table>
             </div>
-            <button onclick="app.switchView('lobby')" class="w-full text-cyan-600 font-bold uppercase text-xs">Back to Main</button>
+            <button onclick="app.switchView('lobby')" class="w-full text-cyan-600 font-black uppercase text-[10px] tracking-widest hover:translate-y-[-1px] transition-transform">Return to Lobby</button>
         </section>
 
     </main>
 
-    <!-- MODAL: SETTINGS & TEACHER -->
-    <div id="modal-settings" class="hidden fixed inset-0 z-[100] modal-overlay flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-md rounded-2xl p-8 space-y-6 relative shadow-2xl">
-            <button onclick="app.closeSettings()" class="absolute top-6 right-6 text-slate-300 hover:text-slate-600"><i data-lucide="x"></i></button>
+    <!-- MODAL: SETTINGS -->
+    <div id="modal-settings" class="hidden fixed inset-0 z-[100] backdrop-blur-md bg-slate-900/20 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-[32px] p-10 space-y-8 relative shadow-2xl scale-in border-none">
+            <button onclick="app.closeSettings()" class="absolute top-8 right-8 text-slate-300 hover:text-slate-600 transition-colors">
+                <i data-lucide="circle-x" class="w-6 h-6"></i>
+            </button>
             
-            <div id="settings-main">
-                <h3 class="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
-                    <i data-lucide="settings" class="w-5 h-5"></i> Menu
-                </h3>
-                <div class="space-y-3">
-                    <button onclick="app.showTeacherLogin()" class="w-full bg-slate-50 p-4 rounded-xl text-left font-semibold text-slate-700 hover:bg-cyan-50 hover:text-cyan-700 transition-colors flex justify-between items-center">
-                        Teacher Console
-                        <i data-lucide="chevron-right" class="w-4 h-4"></i>
+            <div id="settings-main" class="space-y-8">
+                <div class="space-y-1">
+                    <h3 class="text-2xl font-black text-slate-900">Control Panel</h3>
+                    <p class="text-slate-400 text-sm font-medium">Manage your session settings.</p>
+                </div>
+                <div class="space-y-4">
+                    <button onclick="app.showTeacherLogin()" class="group w-full bg-slate-50 p-6 rounded-3xl text-left transition-all hover:bg-cyan-50">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="font-black text-slate-800 text-sm">Teacher Console</p>
+                                <p class="text-slate-400 text-xs mt-1">View class analytics & exports</p>
+                            </div>
+                            <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center text-slate-300 group-hover:text-cyan-500 shadow-sm transition-colors">
+                                <i data-lucide="shield-check" class="w-5 h-5"></i>
+                            </div>
+                        </div>
                     </button>
-                    <button onclick="app.switchView('leaderboard'); app.closeSettings();" class="w-full bg-slate-50 p-4 rounded-xl text-left font-semibold text-slate-700 hover:bg-cyan-50 hover:text-cyan-700 transition-colors flex justify-between items-center">
-                        Global Rankings
-                        <i data-lucide="award" class="w-4 h-4"></i>
+                    <button onclick="app.switchView('leaderboard'); app.closeSettings();" class="group w-full bg-slate-50 p-6 rounded-3xl text-left transition-all hover:bg-cyan-50">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="font-black text-slate-800 text-sm">Global Ranking</p>
+                                <p class="text-slate-400 text-xs mt-1">Check top scores</p>
+                            </div>
+                            <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center text-slate-300 group-hover:text-cyan-500 shadow-sm transition-colors">
+                                <i data-lucide="medal" class="w-5 h-5"></i>
+                            </div>
+                        </div>
                     </button>
                 </div>
             </div>
 
-            <div id="settings-teacher" class="hidden space-y-4">
-                <h3 class="text-xl font-bold text-slate-800 mb-4">Admin Access</h3>
-                <input type="password" id="teacher-pass" placeholder="Admin PIN" class="w-full border border-slate-200 p-3 rounded-lg focus:ring-2 focus:ring-cyan-500">
-                <button onclick="app.attemptTeacherLogin()" class="w-full bg-slate-800 text-white font-bold py-3 rounded-lg uppercase text-xs tracking-widest">Login</button>
-                <button onclick="app.showTeacherLogin(false)" class="w-full text-slate-400 text-[10px] font-bold uppercase">Cancel</button>
+            <div id="settings-teacher" class="hidden space-y-6">
+                <div class="space-y-1">
+                    <h3 class="text-2xl font-black text-slate-900">Admin Login</h3>
+                    <p class="text-slate-400 text-sm font-medium">Enter your 4-digit security PIN.</p>
+                </div>
+                <input type="password" id="teacher-pass" maxlength="4" placeholder="••••" class="w-full bg-slate-50 border-2 border-slate-100 p-5 rounded-2xl text-center text-3xl font-black tracking-[1em] focus:ring-4 focus:ring-cyan-500/10 focus:border-cyan-500 transition-all">
+                <button onclick="app.attemptTeacherLogin()" class="w-full btn-fancy text-white font-extrabold py-5 rounded-2xl shadow-xl shadow-cyan-500/20 uppercase tracking-widest text-xs">Verify Access</button>
+                <button onclick="app.showTeacherLogin(false)" class="w-full text-slate-400 text-[10px] font-black uppercase tracking-widest">Nevermind</button>
             </div>
         </div>
     </div>
 
     <!-- VIEW: TEACHER (Full Screen) -->
-    <div id="view-teacher" class="hidden fixed inset-0 bg-white z-[150] p-10 overflow-auto">
-        <div class="max-w-6xl mx-auto space-y-8">
-            <div class="flex justify-between items-center border-b pb-6">
-                <div>
-                    <h2 class="text-4xl font-black text-slate-800">Admin <span class="text-cyan-600">Dashboard</span></h2>
-                    <p class="text-slate-500">Management and monitoring of typing records.</p>
+    <div id="view-teacher" class="hidden fixed inset-0 bg-slate-50 z-[150] p-8 md:p-16 overflow-auto">
+        <div class="max-w-6xl mx-auto space-y-12">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                <div class="space-y-2">
+                    <div class="flex items-center gap-3 text-cyan-600">
+                        <i data-lucide="shield-check" class="w-6 h-6"></i>
+                        <span class="text-[10px] font-black uppercase tracking-[0.3em]">Authorized Access</span>
+                    </div>
+                    <h2 class="text-5xl font-black text-slate-900">Admin <span class="text-cyan-500 underline decoration-cyan-100 underline-offset-8">Panel</span></h2>
                 </div>
-                <div class="flex gap-4">
-                    <button onclick="app.exportCSV()" class="bg-slate-100 text-slate-700 px-6 py-2.5 rounded-lg font-bold text-xs uppercase flex items-center gap-2">
-                        <i data-lucide="download" class="w-4 h-4"></i> Export CSV
+                <div class="flex gap-4 w-full md:w-auto">
+                    <button onclick="app.exportCSV()" class="flex-1 md:flex-none bg-white text-slate-700 px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest border border-slate-200 hover:bg-slate-100 transition-colors flex items-center justify-center gap-3">
+                        <i data-lucide="file-down" class="w-4 h-4 text-cyan-500"></i> Export Scores
                     </button>
-                    <button onclick="app.switchView('lobby')" class="bg-cyan-600 text-white px-6 py-2.5 rounded-lg font-bold text-xs uppercase">Exit Console</button>
+                    <button onclick="app.switchView('lobby')" class="flex-1 md:flex-none bg-slate-900 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-slate-900/20 hover:scale-105 transition-all">Logout</button>
                 </div>
             </div>
-            <div class="glass-card overflow-hidden">
+
+            <div class="glass-card overflow-hidden border-none bg-white shadow-2xl shadow-slate-200/60">
                 <table class="w-full text-left">
-                    <thead class="bg-slate-50 text-[10px] uppercase font-black text-slate-400">
-                        <tr><th class="p-4">Student</th><th class="p-4">Class</th><th class="p-4">WPM</th><th class="p-4">Acc</th><th class="p-4">Date</th></tr>
+                    <thead class="bg-slate-50 text-[10px] uppercase font-black text-slate-400 tracking-widest">
+                        <tr><th class="p-6">Student</th><th class="p-6">Classroom</th><th class="p-6 text-center">WPM</th><th class="p-6 text-center">Acc</th><th class="p-6">Timestamp</th></tr>
                     </thead>
-                    <tbody id="admin-table" class="text-sm divide-y divide-gray-100"></tbody>
+                    <tbody id="admin-table" class="text-sm divide-y divide-slate-50"></tbody>
                 </table>
             </div>
         </div>
@@ -252,27 +341,25 @@
         const fbApp = initializeApp(firebaseConfig);
         const db = getFirestore(fbApp);
         const auth = getAuth(fbApp);
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'typing-arena-v1';
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'typing-arena-v2';
 
         const TEXT_BANKS = {
             cartoon: [
                 "Mickey Mouse is a funny animal cartoon character and the official mascot of The Walt Disney Company. He was created by Walt Disney and Ub Iwerks at the Walt Disney Studios in nineteen twenty eight.",
                 "Tom and Jerry is an American animated media franchise and series of comedy short films created in nineteen forty by William Hanna and Joseph Barbera.",
                 "Marvel Avengers represent a group of powerful superheroes like Iron Man, Captain America, Thor, Hulk, Black Widow and Hawkeye defending the Earth from cosmic threats.",
-                "Doraemon is a robotic cat from the twenty second century who travels back in time to aid a young boy named Nobita Nobi with various gadgets from his four dimensional pocket.",
-                "Pokemon are creatures of all shapes and sizes who live in the wild or alongside their human partners. Ash Ketchum wants to be the world's greatest Pokemon Master."
+                "Doraemon is a robotic cat from the twenty second century who travels back in time to aid a young boy named Nobita Nobi with various gadgets from his four dimensional pocket."
             ],
             tmkoc: [
                 "Jethalal Champaklal Gada is the main character of Taarak Mehta Ka Ooltah Chashmah who runs Gada Electronics and lives in Gokuldham Society with his wife Daya and son Tapu.",
                 "Atmaram Tukaram Bhide is the secretary of Gokuldham Society and a tuition teacher who often argues with Jethalal over his scooter Sakharam or society maintenance issues.",
                 "Daya Jethalal Gada is known for her signature laugh and her energetic Garba. She is extremely devoted to her husband Jethalal and her father in law Champaklal Jayantilal Gada.",
-                "Taarak Mehta is Jethalal's fire brigade who always saves him from difficult situations. He is a writer by profession and the show is based on his real life articles.",
-                "Popatlal Pandey is an investigative journalist for Toofani Glass who is always carrying an umbrella and desperately wants to get married to a beautiful girl."
+                "Taarak Mehta is Jethalal's fire brigade who always saves him from difficult situations. He is a writer by profession and the show is based on his real life articles."
             ],
             tech: [
-                "Software engineering is a systematic engineering approach to software development. A software engineer is a person who applies the principles of software engineering to design.",
                 "Artificial intelligence is intelligence demonstrated by machines, as opposed to the natural intelligence displayed by animals including humans. AI systems learn from experience.",
-                "Cloud computing is the on demand availability of computer system resources, especially data storage and computing power, without direct active management by the user."
+                "Cloud computing is the on demand availability of computer system resources, especially data storage and computing power, without direct active management by the user.",
+                "The future of quantum computing promises to solve problems that are currently impossible for classical computers to handle, revolutionizing cryptography and medicine."
             ]
         };
 
@@ -333,7 +420,6 @@
                 const viewEl = document.getElementById(`view-${name}`);
                 if (viewEl) viewEl.classList.remove('hidden');
                 
-                // Teacher view is special (fixed overlay)
                 document.getElementById('view-teacher').classList.toggle('hidden', name !== 'teacher');
                 
                 if (name === 'arena') this.resetSession();
@@ -349,7 +435,7 @@
                 this.classId = cid || 'General';
                 this.category = cat;
                 
-                document.getElementById('nav-stats').classList.remove('hidden');
+                document.getElementById('nav-stats').style.display = 'flex';
                 document.getElementById('user-display').innerText = this.studentName;
                 document.getElementById('user-initials').innerText = this.studentName.substring(0,2).toUpperCase();
                 this.switchView('arena');
@@ -385,7 +471,14 @@
                 const spans = document.querySelectorAll('.char');
                 spans.forEach(c => c.classList.remove('current'));
                 const cur = document.getElementById(`c-${index}`);
-                if (cur) cur.classList.add('current');
+                if (cur) {
+                    cur.classList.add('current');
+                    // Simple auto-scroll check
+                    if (index > 0 && index % 40 === 0) {
+                        const lineNum = Math.floor(index / 40);
+                        document.getElementById('text-display').style.transform = `translateY(-${lineNum * 40}px)`;
+                    }
+                }
             },
 
             handleTyping(e) {
@@ -413,8 +506,6 @@
                     }
                 }
                 this.updateCaret(val.length);
-                
-                // Finish if text completed early
                 if (val.length === this.targetText.length) this.endSession();
             },
 
@@ -462,23 +553,27 @@
                 });
                 const sorted = Object.values(userBest).sort((a,b) => b.net - a.net).slice(0, 10);
                 document.getElementById('leaderboard-table').innerHTML = sorted.map((s, i) => `
-                    <tr class="hover:bg-slate-50 transition-colors">
-                        <td class="p-5 font-bold text-slate-400">#${i+1}</td>
-                        <td class="p-5 font-bold text-slate-700">${s.user}</td>
-                        <td class="p-5 text-cyan-600 font-black">${s.net} <span class="text-[10px] text-slate-400">NET</span></td>
-                        <td class="p-5 text-slate-500 font-medium">${s.acc}%</td>
+                    <tr class="hover:bg-slate-50 transition-all duration-300">
+                        <td class="p-6">
+                            <span class="flex items-center justify-center w-8 h-8 rounded-lg font-black text-xs ${i === 0 ? 'bg-amber-100 text-amber-600' : 'bg-slate-100 text-slate-400'}">
+                                ${i+1}
+                            </span>
+                        </td>
+                        <td class="p-6 font-bold text-slate-800">${s.user}</td>
+                        <td class="p-6 text-center font-black text-cyan-600 tabular-nums">${s.net}</td>
+                        <td class="p-6 font-semibold text-slate-400 tabular-nums">${s.acc}%</td>
                     </tr>
                 `).join('') || '<tr><td colspan="4" class="p-10 text-center text-slate-400">No records found.</td></tr>';
             },
 
             renderAdmin() {
                 document.getElementById('admin-table').innerHTML = [...this.dbRecords].sort((a,b) => new Date(b.date) - new Date(a.date)).map(e => `
-                    <tr>
-                        <td class="p-4 font-bold text-slate-700">${e.user}</td>
-                        <td class="p-4 text-slate-500">${e.classId}</td>
-                        <td class="p-4 font-bold text-cyan-600">${e.wpm}</td>
-                        <td class="p-4">${e.acc}%</td>
-                        <td class="p-4 text-[11px] text-slate-400">${new Date(e.date).toLocaleString()}</td>
+                    <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="p-6 font-bold text-slate-800">${e.user}</td>
+                        <td class="p-6 text-slate-500 font-medium">${e.classId}</td>
+                        <td class="p-6 text-center font-black text-cyan-500 tabular-nums">${e.wpm}</td>
+                        <td class="p-6 text-center font-bold text-slate-700 tabular-nums">${e.acc}%</td>
+                        <td class="p-6 text-[11px] text-slate-400 font-medium uppercase tracking-tighter">${new Date(e.date).toLocaleString()}</td>
                     </tr>
                 `).join('');
             },
@@ -496,7 +591,8 @@
                     this.closeSettings();
                     this.switchView('teacher');
                 } else {
-                    alert("Incorrect PIN");
+                    document.getElementById('teacher-pass').classList.add('border-red-500');
+                    setTimeout(() => document.getElementById('teacher-pass').classList.remove('border-red-500'), 500);
                 }
             },
 
@@ -505,7 +601,7 @@
                 const blob = new Blob([csv], { type: 'text/csv' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
-                a.href = url; a.download = `TypingArena_Scores_${new Date().toISOString().slice(0,10)}.csv`; a.click();
+                a.href = url; a.download = `TypingArena_Analytics_${new Date().toISOString().slice(0,10)}.csv`; a.click();
             }
         };
 
