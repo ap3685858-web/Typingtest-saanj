@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TypingArena | Pro Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #00acc1;
+            --secondary: #26a69a;
+            --bg-light: #f4f7f6;
+            --text-dark: #37474f;
+        }
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg-light); color: var(--text-dark); }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        .glass-card { background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border: 1px solid #e0e0e0; }
+        
+        #text-container { max-height: 200px; overflow-y: hidden; position: relative; }
+        .char { position: relative; display: inline-block; transition: all 0.1s; border-bottom: 2px solid transparent; white-space: pre; color: #90a4ae; font-size: 1.5rem; line-height: 2; }
+        .char.current { color: #263238; background: rgba(0, 172, 193, 0.1); }
+        .char.current::after { 
+            content: ''; position: absolute; left: 0; bottom: 0; width: 100%; height: 3px; 
+            background: var(--primary); animation: blink 1s infinite; 
+        }
+        .char.correct { color: #00acc1; }
+        .char.incorrect { color: #ff5252; background: rgba(255, 82, 82, 0.1); border-bottom: 2px solid #ff5252; }
+        @keyframes blink { 50% { opacity: 0; } }
+        
+        .active-tab { border-bottom: 3px solid var(--primary); color: var(--primary) !important; font-weight: 700; }
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cfd8dc; border-radius: 10px; }
+        
+        .btn-primary { background: var(--primary); color: white; transition: all 0.2s; }
+        .btn-primary:hover { background: #0097a7; transform: translateY(-1px); }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <!-- TOP BAR -->
+    <nav class="bg-white border-b border-gray-200 px-6 py-3 flex justify-between items-center sticky top-0 z-50">
+        <div class="flex items-center gap-3 cursor-pointer" onclick="app.switchView('lobby')">
+            <div class="bg-cyan-600 p-1.5 rounded-lg">
+                <i data-lucide="keyboard" class="text-white w-5 h-5"></i>
+            </div>
+            <span class="text-xl font-bold tracking-tight text-slate-800">Typing<span class="text-cyan-600">Arena</span></span>
+        </div>
+        <div class="flex items-center gap-6">
+            <button onclick="app.switchView('leaderboard')" class="text-sm font-semibold text-slate-500 hover:text-cyan-600 flex items-center gap-1.5">
+                <i data-lucide="award" class="w-4 h-4"></i> Leaderboard
+            </button>
+            <div id="nav-stats" class="hidden md:flex items-center gap-2 border-l pl-6 border-gray-200">
+                <div class="w-8 h-8 rounded-full bg-cyan-100 flex items-center justify-center text-cyan-700 font-bold text-xs" id="user-initials">?</div>
+                <span id="user-display" class="text-sm font-medium text-slate-700"></span>
+            </div>
+            <button onclick="app.openSettings()" class="p-2 hover:bg-gray-100 rounded-full text-slate-400 transition-colors">
+                <i data-lucide="menu" class="w-5 h-5"></i>
+            </button>
+        </div>
+    </nav>
+
+    <main class="container mx-auto px-4 py-8 max-w-5xl">
+        
+        <!-- VIEW: LOBBY -->
+        <section id="view-lobby" class="max-w-xl mx-auto space-y-8 mt-10">
+            <div class="text-center space-y-3">
+                <h2 class="text-4xl font-black text-slate-800">Start Your Test</h2>
+                <p class="text-slate-500">Choose a category and show your skills.</p>
+            </div>
+
+            <div class="glass-card p-8 space-y-6">
+                <div class="space-y-4">
+                    <div>
+                        <label class="text-xs font-bold uppercase text-slate-400 mb-1 block">Your Name</label>
+                        <input type="text" id="input-name" placeholder="Enter Full Name" class="w-full bg-slate-50 border border-slate-200 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all">
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold uppercase text-slate-400 mb-1 block">Classroom / Group ID</label>
+                        <input type="text" id="input-class" placeholder="Optional" class="w-full bg-slate-50 border border-slate-200 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all">
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold uppercase text-slate-400 mb-1 block">Category</label>
+                        <select id="input-category" class="w-full bg-slate-50 border border-slate-200 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all">
+                            <option value="cartoon">Cartoon GK (Disney, Marvel, etc.)</option>
+                            <option value="tmkoc">Taarak Mehta Ka Ooltah Chashmah</option>
+                            <option value="tech">Technology & Coding</option>
+                        </select>
+                    </div>
+                </div>
+                <button onclick="app.joinArena()" class="w-full btn-primary font-bold py-4 rounded-xl shadow-lg shadow-cyan-500/20 uppercase tracking-wider text-sm">
+                    Start Typing Test
+                </button>
+            </div>
+        </section>
+
+        <!-- VIEW: ARENA -->
+        <section id="view-arena" class="hidden space-y-6">
+            <!-- Tabs for Duration -->
+            <div class="flex justify-center border-b border-gray-200 mb-6">
+                <button class="time-opt px-8 py-3 text-sm font-medium text-slate-400 hover:text-slate-600 active-tab" onclick="app.setDuration(15, this)">15 Seconds</button>
+                <button class="time-opt px-8 py-3 text-sm font-medium text-slate-400 hover:text-slate-600" onclick="app.setDuration(30, this)">30 Seconds</button>
+                <button class="time-opt px-8 py-3 text-sm font-medium text-slate-400 hover:text-slate-600" onclick="app.setDuration(60, this)">1 Minute</button>
+            </div>
+
+            <!-- Floating Stats (Mobile Responsive) -->
+            <div class="grid grid-cols-3 gap-4 md:gap-8 max-w-3xl mx-auto">
+                <div class="glass-card p-4 text-center">
+                    <div class="text-[10px] text-slate-400 uppercase font-bold mb-1">Time Left</div>
+                    <div class="text-3xl font-black text-cyan-600" id="stat-time">30</div>
+                </div>
+                <div class="glass-card p-4 text-center">
+                    <div class="text-[10px] text-slate-400 uppercase font-bold mb-1">Speed (WPM)</div>
+                    <div class="text-3xl font-black text-slate-800" id="stat-wpm">0</div>
+                </div>
+                <div class="glass-card p-4 text-center">
+                    <div class="text-[10px] text-slate-400 uppercase font-bold mb-1">Accuracy</div>
+                    <div class="text-3xl font-black text-slate-800"><span id="stat-acc">100</span>%</div>
+                </div>
+            </div>
+
+            <!-- The Arena -->
+            <div class="relative glass-card p-12 mt-8 min-h-[280px] flex items-center justify-center overflow-hidden">
+                <div id="text-container" class="w-full max-w-4xl">
+                    <div id="text-display" class="text-center font-medium mono select-none transition-transform duration-300"></div>
+                </div>
+                <!-- Real-time hidden input -->
+                <input type="text" id="hidden-input" class="absolute inset-0 opacity-0 cursor-default" autofocus autocomplete="off" spellcheck="false">
+            </div>
+
+            <div class="text-center">
+                <p class="text-slate-400 text-xs font-medium flex items-center justify-center gap-2">
+                    <i data-lucide="info" class="w-3 h-3"></i> Press <span class="px-1.5 py-0.5 bg-gray-200 rounded border text-slate-600">Enter</span> to restart
+                </p>
+            </div>
+        </section>
+
+        <!-- VIEW: RESULTS -->
+        <section id="view-results" class="hidden max-w-4xl mx-auto space-y-8">
+            <div class="text-center">
+                <h2 class="text-3xl font-black text-slate-800 mb-2">Test Score</h2>
+                <p class="text-slate-500">Great job! Here is how you performed.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="glass-card p-8 flex flex-col items-center justify-center relative overflow-hidden">
+                    <div class="absolute top-0 right-0 p-2 opacity-5"><i data-lucide="zap" class="w-20 h-20"></i></div>
+                    <div class="text-5xl font-black text-cyan-600" id="res-wpm">0</div>
+                    <div class="text-xs font-bold text-slate-400 uppercase mt-2">Gross WPM</div>
+                </div>
+                <div class="glass-card p-8 flex flex-col items-center justify-center relative overflow-hidden">
+                    <div class="absolute top-0 right-0 p-2 opacity-5"><i data-lucide="check-circle" class="w-20 h-20"></i></div>
+                    <div class="text-5xl font-black text-teal-600" id="res-acc">0%</div>
+                    <div class="text-xs font-bold text-slate-400 uppercase mt-2">Accuracy</div>
+                </div>
+                <div class="glass-card p-8 flex flex-col items-center justify-center bg-cyan-600 text-white border-none shadow-cyan-200">
+                    <div class="text-5xl font-black" id="res-net">0</div>
+                    <div class="text-xs font-bold uppercase mt-2 opacity-80">Net Speed (WPM)</div>
+                </div>
+            </div>
+
+            <div class="flex flex-col md:flex-row gap-4 justify-center pt-6">
+                <button onclick="app.switchView('arena')" class="btn-primary px-10 py-4 rounded-xl font-bold uppercase text-sm flex items-center justify-center gap-2">
+                    <i data-lucide="refresh-cw" class="w-4 h-4"></i> Retake Test
+                </button>
+                <button onclick="app.switchView('lobby')" class="bg-white border border-gray-300 text-slate-600 px-10 py-4 rounded-xl font-bold uppercase text-sm hover:bg-gray-50">
+                    New Category
+                </button>
+            </div>
+        </section>
+
+        <!-- VIEW: LEADERBOARD -->
+        <section id="view-leaderboard" class="hidden space-y-6 max-w-2xl mx-auto">
+            <h2 class="text-3xl font-bold text-center text-slate-800">Top Performers</h2>
+            <div class="glass-card overflow-hidden">
+                <table class="w-full text-left">
+                    <thead class="bg-slate-50 text-[10px] uppercase font-bold text-slate-400 border-b">
+                        <tr><th class="p-5">Rank</th><th class="p-5">Name</th><th class="p-5">WPM</th><th class="p-5">Accuracy</th></tr>
+                    </thead>
+                    <tbody id="leaderboard-table" class="divide-y divide-gray-100"></tbody>
+                </table>
+            </div>
+            <button onclick="app.switchView('lobby')" class="w-full text-cyan-600 font-bold uppercase text-xs">Back to Main</button>
+        </section>
+
+    </main>
+
+    <!-- MODAL: SETTINGS & TEACHER -->
+    <div id="modal-settings" class="hidden fixed inset-0 z-[100] modal-overlay flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-2xl p-8 space-y-6 relative shadow-2xl">
+            <button onclick="app.closeSettings()" class="absolute top-6 right-6 text-slate-300 hover:text-slate-600"><i data-lucide="x"></i></button>
+            
+            <div id="settings-main">
+                <h3 class="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
+                    <i data-lucide="settings" class="w-5 h-5"></i> Menu
+                </h3>
+                <div class="space-y-3">
+                    <button onclick="app.showTeacherLogin()" class="w-full bg-slate-50 p-4 rounded-xl text-left font-semibold text-slate-700 hover:bg-cyan-50 hover:text-cyan-700 transition-colors flex justify-between items-center">
+                        Teacher Console
+                        <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                    </button>
+                    <button onclick="app.switchView('leaderboard'); app.closeSettings();" class="w-full bg-slate-50 p-4 rounded-xl text-left font-semibold text-slate-700 hover:bg-cyan-50 hover:text-cyan-700 transition-colors flex justify-between items-center">
+                        Global Rankings
+                        <i data-lucide="award" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div id="settings-teacher" class="hidden space-y-4">
+                <h3 class="text-xl font-bold text-slate-800 mb-4">Admin Access</h3>
+                <input type="password" id="teacher-pass" placeholder="Admin PIN" class="w-full border border-slate-200 p-3 rounded-lg focus:ring-2 focus:ring-cyan-500">
+                <button onclick="app.attemptTeacherLogin()" class="w-full bg-slate-800 text-white font-bold py-3 rounded-lg uppercase text-xs tracking-widest">Login</button>
+                <button onclick="app.showTeacherLogin(false)" class="w-full text-slate-400 text-[10px] font-bold uppercase">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- VIEW: TEACHER (Full Screen) -->
+    <div id="view-teacher" class="hidden fixed inset-0 bg-white z-[150] p-10 overflow-auto">
+        <div class="max-w-6xl mx-auto space-y-8">
+            <div class="flex justify-between items-center border-b pb-6">
+                <div>
+                    <h2 class="text-4xl font-black text-slate-800">Admin <span class="text-cyan-600">Dashboard</span></h2>
+                    <p class="text-slate-500">Management and monitoring of typing records.</p>
+                </div>
+                <div class="flex gap-4">
+                    <button onclick="app.exportCSV()" class="bg-slate-100 text-slate-700 px-6 py-2.5 rounded-lg font-bold text-xs uppercase flex items-center gap-2">
+                        <i data-lucide="download" class="w-4 h-4"></i> Export CSV
+                    </button>
+                    <button onclick="app.switchView('lobby')" class="bg-cyan-600 text-white px-6 py-2.5 rounded-lg font-bold text-xs uppercase">Exit Console</button>
+                </div>
+            </div>
+            <div class="glass-card overflow-hidden">
+                <table class="w-full text-left">
+                    <thead class="bg-slate-50 text-[10px] uppercase font-black text-slate-400">
+                        <tr><th class="p-4">Student</th><th class="p-4">Class</th><th class="p-4">WPM</th><th class="p-4">Acc</th><th class="p-4">Date</th></tr>
+                    </thead>
+                    <tbody id="admin-table" class="text-sm divide-y divide-gray-100"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const fbApp = initializeApp(firebaseConfig);
+        const db = getFirestore(fbApp);
+        const auth = getAuth(fbApp);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'typing-arena-v1';
+
+        const TEXT_BANKS = {
+            cartoon: [
+                "Mickey Mouse is a funny animal cartoon character and the official mascot of The Walt Disney Company. He was created by Walt Disney and Ub Iwerks at the Walt Disney Studios in nineteen twenty eight.",
+                "Tom and Jerry is an American animated media franchise and series of comedy short films created in nineteen forty by William Hanna and Joseph Barbera.",
+                "Marvel Avengers represent a group of powerful superheroes like Iron Man, Captain America, Thor, Hulk, Black Widow and Hawkeye defending the Earth from cosmic threats.",
+                "Doraemon is a robotic cat from the twenty second century who travels back in time to aid a young boy named Nobita Nobi with various gadgets from his four dimensional pocket.",
+                "Pokemon are creatures of all shapes and sizes who live in the wild or alongside their human partners. Ash Ketchum wants to be the world's greatest Pokemon Master."
+            ],
+            tmkoc: [
+                "Jethalal Champaklal Gada is the main character of Taarak Mehta Ka Ooltah Chashmah who runs Gada Electronics and lives in Gokuldham Society with his wife Daya and son Tapu.",
+                "Atmaram Tukaram Bhide is the secretary of Gokuldham Society and a tuition teacher who often argues with Jethalal over his scooter Sakharam or society maintenance issues.",
+                "Daya Jethalal Gada is known for her signature laugh and her energetic Garba. She is extremely devoted to her husband Jethalal and her father in law Champaklal Jayantilal Gada.",
+                "Taarak Mehta is Jethalal's fire brigade who always saves him from difficult situations. He is a writer by profession and the show is based on his real life articles.",
+                "Popatlal Pandey is an investigative journalist for Toofani Glass who is always carrying an umbrella and desperately wants to get married to a beautiful girl."
+            ],
+            tech: [
+                "Software engineering is a systematic engineering approach to software development. A software engineer is a person who applies the principles of software engineering to design.",
+                "Artificial intelligence is intelligence demonstrated by machines, as opposed to the natural intelligence displayed by animals including humans. AI systems learn from experience.",
+                "Cloud computing is the on demand availability of computer system resources, especially data storage and computing power, without direct active management by the user."
+            ]
+        };
+
+        window.app = {
+            view: 'lobby',
+            user: null,
+            studentName: '',
+            classId: '',
+            category: 'cartoon',
+            duration: 30,
+            targetText: "",
+            userInput: "",
+            startTime: null,
+            timer: null,
+            dbRecords: [],
+
+            async init() {
+                lucide.createIcons();
+                const initAuth = async () => {
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                };
+
+                onAuthStateChanged(auth, (user) => {
+                    this.user = user;
+                    if (user) this.syncData();
+                });
+
+                await initAuth();
+                this.setupKeyboard();
+            },
+
+            syncData() {
+                if (!this.user) return;
+                const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'scores'));
+                onSnapshot(q, (snapshot) => {
+                    this.dbRecords = snapshot.docs.map(doc => doc.data());
+                    this.renderLeaderboard();
+                    this.renderAdmin();
+                }, (err) => console.error("Sync error:", err));
+            },
+
+            setupKeyboard() {
+                const input = document.getElementById('hidden-input');
+                input.addEventListener('input', (e) => this.handleTyping(e));
+                window.addEventListener('keydown', (e) => {
+                    if (this.view === 'arena') input.focus();
+                    if (e.key === 'Enter' && this.view === 'arena') this.resetSession();
+                });
+            },
+
+            switchView(name) {
+                this.view = name;
+                document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
+                const viewEl = document.getElementById(`view-${name}`);
+                if (viewEl) viewEl.classList.remove('hidden');
+                
+                // Teacher view is special (fixed overlay)
+                document.getElementById('view-teacher').classList.toggle('hidden', name !== 'teacher');
+                
+                if (name === 'arena') this.resetSession();
+                lucide.createIcons();
+            },
+
+            joinArena() {
+                const name = document.getElementById('input-name').value.trim();
+                const cid = document.getElementById('input-class').value.trim();
+                const cat = document.getElementById('input-category').value;
+                if (!name) return;
+                this.studentName = name;
+                this.classId = cid || 'General';
+                this.category = cat;
+                
+                document.getElementById('nav-stats').classList.remove('hidden');
+                document.getElementById('user-display').innerText = this.studentName;
+                document.getElementById('user-initials').innerText = this.studentName.substring(0,2).toUpperCase();
+                this.switchView('arena');
+            },
+
+            setDuration(s, el) {
+                this.duration = s;
+                document.querySelectorAll('.time-opt').forEach(opt => opt.classList.remove('active-tab'));
+                el.classList.add('active-tab');
+                this.resetSession();
+            },
+
+            resetSession() {
+                clearInterval(this.timer);
+                this.startTime = null;
+                this.userInput = "";
+                document.getElementById('hidden-input').value = "";
+                document.getElementById('stat-time').innerText = this.duration;
+                document.getElementById('stat-wpm').innerText = "0";
+                document.getElementById('stat-acc').innerText = "100";
+                
+                const bank = TEXT_BANKS[this.category];
+                this.targetText = bank[Math.floor(Math.random() * bank.length)];
+                
+                const display = document.getElementById('text-display');
+                display.style.transform = `translateY(0px)`;
+                display.innerHTML = this.targetText.split('').map((char, i) => `<span class="char" id="c-${i}">${char}</span>`).join('');
+                this.updateCaret(0);
+                setTimeout(() => document.getElementById('hidden-input').focus(), 50);
+            },
+
+            updateCaret(index) {
+                const spans = document.querySelectorAll('.char');
+                spans.forEach(c => c.classList.remove('current'));
+                const cur = document.getElementById(`c-${index}`);
+                if (cur) cur.classList.add('current');
+            },
+
+            handleTyping(e) {
+                if (this.view !== 'arena') return;
+                const val = e.target.value;
+                
+                if (!this.startTime && val.length > 0) {
+                    this.startTime = Date.now();
+                    this.timer = setInterval(() => {
+                        const elapsed = (Date.now() - this.startTime) / 1000;
+                        const remaining = Math.max(0, this.duration - Math.floor(elapsed));
+                        document.getElementById('stat-time').innerText = remaining;
+                        this.updateLiveStats();
+                        if (remaining <= 0) this.endSession();
+                    }, 1000);
+                }
+                
+                const spans = document.querySelectorAll('.char');
+                this.userInput = val;
+                for (let i = 0; i < spans.length; i++) {
+                    if (i < val.length) {
+                        spans[i].className = (val[i] === this.targetText[i]) ? "char correct" : "char incorrect";
+                    } else {
+                        spans[i].className = "char";
+                    }
+                }
+                this.updateCaret(val.length);
+                
+                // Finish if text completed early
+                if (val.length === this.targetText.length) this.endSession();
+            },
+
+            updateLiveStats() {
+                const elapsed = (Date.now() - this.startTime) / 60000;
+                const wpm = Math.round((this.userInput.length / 5) / elapsed) || 0;
+                const correct = document.querySelectorAll('.char.correct').length;
+                const acc = Math.round((correct / Math.max(1, this.userInput.length)) * 100) || 0;
+                document.getElementById('stat-wpm').innerText = wpm;
+                document.getElementById('stat-acc').innerText = acc;
+            },
+
+            async endSession() {
+                clearInterval(this.timer);
+                if (!this.user) return;
+                
+                const wpm = parseInt(document.getElementById('stat-wpm').innerText);
+                const acc = parseInt(document.getElementById('stat-acc').innerText);
+                const net = Math.round(wpm * (acc / 100));
+                
+                if (wpm > 5) {
+                    try {
+                        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'scores'), {
+                            user: this.studentName,
+                            classId: this.classId,
+                            wpm,
+                            acc,
+                            net,
+                            category: this.category,
+                            date: new Date().toISOString()
+                        });
+                    } catch (e) { console.error(e); }
+                }
+
+                document.getElementById('res-wpm').innerText = wpm;
+                document.getElementById('res-acc').innerText = acc + "%";
+                document.getElementById('res-net').innerText = net;
+                this.switchView('results');
+            },
+
+            renderLeaderboard() {
+                const userBest = {};
+                this.dbRecords.forEach(e => {
+                    if (!userBest[e.user] || e.net > userBest[e.user].net) userBest[e.user] = e;
+                });
+                const sorted = Object.values(userBest).sort((a,b) => b.net - a.net).slice(0, 10);
+                document.getElementById('leaderboard-table').innerHTML = sorted.map((s, i) => `
+                    <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="p-5 font-bold text-slate-400">#${i+1}</td>
+                        <td class="p-5 font-bold text-slate-700">${s.user}</td>
+                        <td class="p-5 text-cyan-600 font-black">${s.net} <span class="text-[10px] text-slate-400">NET</span></td>
+                        <td class="p-5 text-slate-500 font-medium">${s.acc}%</td>
+                    </tr>
+                `).join('') || '<tr><td colspan="4" class="p-10 text-center text-slate-400">No records found.</td></tr>';
+            },
+
+            renderAdmin() {
+                document.getElementById('admin-table').innerHTML = [...this.dbRecords].sort((a,b) => new Date(b.date) - new Date(a.date)).map(e => `
+                    <tr>
+                        <td class="p-4 font-bold text-slate-700">${e.user}</td>
+                        <td class="p-4 text-slate-500">${e.classId}</td>
+                        <td class="p-4 font-bold text-cyan-600">${e.wpm}</td>
+                        <td class="p-4">${e.acc}%</td>
+                        <td class="p-4 text-[11px] text-slate-400">${new Date(e.date).toLocaleString()}</td>
+                    </tr>
+                `).join('');
+            },
+
+            openSettings() { document.getElementById('modal-settings').classList.remove('hidden'); },
+            closeSettings() { document.getElementById('modal-settings').classList.add('hidden'); this.showTeacherLogin(false); },
+            showTeacherLogin(show = true) {
+                document.getElementById('settings-main').classList.toggle('hidden', show);
+                document.getElementById('settings-teacher').classList.toggle('hidden', !show);
+            },
+
+            attemptTeacherLogin() {
+                const pass = document.getElementById('teacher-pass').value;
+                if (pass === '1234') {
+                    this.closeSettings();
+                    this.switchView('teacher');
+                } else {
+                    alert("Incorrect PIN");
+                }
+            },
+
+            exportCSV() {
+                let csv = "User,Class,WPM,Accuracy,NetWPM,Date\n" + this.dbRecords.map(e => `"${e.user}","${e.classId}",${e.wpm},${e.acc},${e.net},"${e.date}"`).join("\n");
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url; a.download = `TypingArena_Scores_${new Date().toISOString().slice(0,10)}.csv`; a.click();
+            }
+        };
+
+        window.onload = () => app.init();
+    </script>
+</body>
+</html>
